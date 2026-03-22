@@ -1,0 +1,123 @@
+{
+  "common": {
+    "appName": "GrowKeeper",
+    "loading": "加载中...",
+    "error": "发生错误",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "add": "添加",
+    "search": "搜索",
+    "noResults": "未找到结果",
+    "signIn": "登录",
+    "signOut": "退出登录",
+    "notSignedIn": "未登录"
+  },
+  "navigation": {
+    "dashboard": "仪表盘",
+    "plants": "植物",
+    "reminders": "提醒",
+    "settings": "设置"
+  },
+  "dashboard": {
+    "title": "仪表盘",
+    "subtitle": "监控您的植物、任务和最近的护理活动。",
+    "totalPlants": "植物总数",
+    "incompleteTasks": "待完成任务",
+    "careEvents": "护理事件",
+    "upcomingTasks": "即将到期的任务",
+    "recentActivity": "最近护理活动",
+    "noTasks": "没有即将到期的任务",
+    "noActivity": "没有最近的护理活动"
+  },
+  "plants": {
+    "title": "我的植物",
+    "subtitle": "管理您的植物收藏",
+    "addPlant": "添加植物",
+    "noPlants": "暂无植物",
+    "addFirstPlant": "添加您的第一株植物，开始跟踪护理。",
+    "searchPlaceholder": "搜索植物...",
+    "plantCount": "收藏中有 {count} 株植物"
+  },
+  "plantForm": {
+    "addTitle": "添加新植物",
+    "editTitle": "编辑植物",
+    "nickname": "昵称",
+    "nicknamePlaceholder": "例如：办公室蕨类、厨房罗勒",
+    "nicknameRequired": "昵称为必填项",
+    "species": "物种名称",
+    "speciesPlaceholder": "例如：Nephrolepis exaltata",
+    "speciesOptional": "（可选）",
+    "notes": "备注",
+    "notesPlaceholder": "任何特殊护理说明或备注...",
+    "notesOptional": "（可选）",
+    "backToPlants": "返回植物列表"
+  },
+  "careEvents": {
+    "logCare": "记录护理",
+    "water": "浇水",
+    "fertilize": "施肥",
+    "prune": "修剪",
+    "repot": "换盆",
+    "addNote": "+ 添加备注",
+    "careHistory": "护理历史",
+    "noCareEvents": "暂无护理事件。",
+    "logFirstCare": "在上方记录您的第一次护理活动。",
+    "logged": "{type} 已记录！"
+  },
+  "tasks": {
+    "title": "任务",
+    "addTask": "添加任务",
+    "noTasks": "暂无任务。",
+    "addFirstTask": "添加任务以跟踪即将进行的护理。",
+    "taskType": "任务类型",
+    "dueDate": "截止日期",
+    "dueDateOptional": "（可选）",
+    "overdue": "已逾期",
+    "dueToday": "今日到期",
+    "upcoming": "即将到期",
+    "completed": "已完成",
+    "markComplete": "标记完成"
+  },
+  "reminders": {
+    "title": "提醒",
+    "subtitle": "掌握您的植物护理日程",
+    "allCaughtUp": "全部完成！",
+    "noPendingTasks": "没有待处理的任务。为您的植物添加任务以获取提醒。",
+    "viewPlants": "查看植物",
+    "thisWeek": "本周",
+    "later": "稍后"
+  },
+  "gamification": {
+    "level": "等级 {level}",
+    "points": "{points} 积分",
+    "streak": "{days} 天连续",
+    "badges": "徽章",
+    "newBadge": "获得新徽章！",
+    "noBadges": "暂无徽章。完成任务以获取徽章！"
+  },
+  "settings": {
+    "title": "设置",
+    "profile": "个人资料",
+    "notifications": "通知",
+    "emailReminders": "邮件提醒",
+    "emailRemindersDesc": "接收每日到期任务邮件提醒",
+    "theme": "主题",
+    "themeLight": "浅色",
+    "themeDark": "深色",
+    "themeSystem": "跟随系统",
+    "language": "语言",
+    "exportData": "导出数据",
+    "exportDataDesc": "将所有植物数据下载为 JSON",
+    "dangerZone": "危险区域",
+    "deleteAccount": "删除账户"
+  },
+  "errors": {
+    "generic": "出错了，请重试。",
+    "notSignedIn": "请登录以继续。",
+    "plantNotFound": "未找到植物。",
+    "failedToLoad": "加载数据失败。",
+    "failedToSave": "保存更改失败。"
+  }
+}

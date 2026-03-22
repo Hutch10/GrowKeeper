@@ -95,9 +95,9 @@ export function UpcomingTasksList({ tasks }: UpcomingTasksListProps) {
 
       {tasks.map((task) => {
         const urgency = getTaskUrgency(task.due_date);
-        const plantNickname = Array.isArray(task.plant)
-          ? (task.plant[0]?.nickname ?? "Unknown plant")
-          : (task.plant?.nickname ?? "Unknown plant");
+        const specimenNickname = Array.isArray(task.specimen)
+          ? (task.specimen[0]?.nickname ?? "Unknown specimen")
+          : (task.specimen?.nickname ?? "Unknown specimen");
 
         return (
           <article
@@ -108,22 +108,22 @@ export function UpcomingTasksList({ tasks }: UpcomingTasksListProps) {
               <div className="space-y-1.5">
                 <p className="text-base font-semibold capitalize text-slate-900">{task.task_type}</p>
                 <p className="text-sm text-slate-600">
-                  Plant:{" "}
+                  Specimen:{" "}
                   <Link
-                    href={`/plants/${task.plant_id}`}
+                    href={`/plants/${task.specimen_id}`}
                     className="font-medium text-slate-900 underline hover:text-slate-700"
                   >
-                    {plantNickname}
+                    {specimenNickname}
                   </Link>
                 </p>
                 <p className="text-xs text-slate-500">
                   Due: {task.due_date ? formatDate(task.due_date) : "No due date"}
                 </p>
                 <Link
-                  href={`/plants/${task.plant_id}`}
+                  href={`/plants/${task.specimen_id}`}
                   className="inline-block text-xs text-slate-600 underline hover:text-slate-900"
                 >
-                  Open plant details
+                  Open specimen details
                 </Link>
               </div>
 
@@ -139,7 +139,7 @@ export function UpcomingTasksList({ tasks }: UpcomingTasksListProps) {
                 {!task.completed ? (
                   <button
                     type="button"
-                    onClick={() => handleMarkComplete(task.id, task.plant_id)}
+                    onClick={() => handleMarkComplete(task.id, task.specimen_id)}
                     disabled={completingTaskId !== null}
                     className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >

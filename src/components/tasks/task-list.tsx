@@ -1,98 +1,140 @@
 "use client";
 
-import { useState } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+
 import { markTaskComplete } from "@/app/actions/tasks";
 import { formatDate } from "@/lib/date";
 import type { Database } from "@/types/database";
 
-type Task = Database["public"]["Tables"]["tasks"]["Row"];
+type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
 
 interface TaskListProps {
-  tasks: Task[];
-  plantId: string;
+  tasks: TaskRow[];
+  specimenId: string;
 }
 
-export function TaskList({ tasks, plantId }: TaskListProps) {
+const TASK_CONFIG: Record<string, { emoji: string; label: string }> = {
+  watered: { emoji: "💧", label: "Water" },
+  fertilized: { emoji: "🌱", label: "Fertilize" },
+  prune: { emoji: "✂️", label: "Prune" },
+  repot: { emoji: "🪴", label: "Repot" },
+  inspect: { emoji: "🔍", label: "Inspect" },
+};
+
+export function TaskList({ tasks, specimenId }: TaskListProps) {
   const router = useRouter();
-  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
-  const [completionError, setCompletionError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const incompleteTasks = tasks.filter((t) => !t.completed);
+  const completedTasks = tasks.filter((t) => t.completed);
+
+  const handleComplete = (taskId: string) => {
+    startTransition(async () => {
+      await markTaskComplete(taskId, specimenId);
+      router.refresh();
+    });
+  };
 
   if (tasks.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-6 text-center text-slate-500">
-        No tasks yet
+      <div className="rounded-lg border border-dashed border-brand-pink-dark bg-brand-pink-light/30 p-6 text-center">
+        <p className="text-sm text-brand-dark/60 font-medium">No tasks yet.</p>
+        <p className="mt-1 text-xs text-brand-dark/40">
+          Add a task to track upcoming care.
+        </p>
       </div>
     );
   }
 
-  async function handleMarkComplete(taskId: string) {
-    setCompletionError(null);
-    setCompletingTaskId(taskId);
-
-    const result = await markTaskComplete(taskId, plantId);
-
-    setCompletingTaskId(null);
-
-    if (!result.success) {
-      setCompletionError(`Task completion failure: ${result.error}`);
-      return;
-    }
-
-    router.refresh();
-  }
-
   return (
-    <div className="space-y-3">
-      {completionError ? (
-        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {completionError}
-        </div>
-      ) : null}
+    <div className="space-y-4">
+      {incompleteTasks.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-brand-green uppercase tracking-wider">Upcoming</h4>
+          {incompleteTasks.map((task) => {
+            const config = TASK_CONFIG[task.task_type] || {
+              emoji: "📋",
+              label: task.task_type,
+            };
+            const isOverdue = task.due_date && new Date(task.due_date) < new Date();
 
-      {tasks.map((task) => {
-        const isCompleted = Boolean(task.completed);
-
-        return (
-          <article
-            key={task.id}
-            className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-slate-900">{task.task_type}</p>
-                <p className="text-xs text-slate-500">
-                  Due: {task.due_date ? formatDate(task.due_date) : "No due date"}
-                </p>
-                <p className="text-xs text-slate-500">Created: {formatDate(task.created_at)}</p>
-              </div>
-
-              <div className="flex flex-col items-end gap-2">
-                <span
-                  className={`rounded-full px-2 py-1 text-xs font-medium ${
-                    isCompleted
-                      ? "bg-green-100 text-green-700"
-                      : "bg-amber-100 text-amber-700"
-                  }`}
+            return (
+              <div
+                key={task.id}
+                className={`flex items-center gap-3 rounded-lg border p-3 shadow-sm transition-all ${
+                  isOverdue
+                    ? "border-red-200 bg-red-50"
+                    : "border-brand-pink/30 bg-white hover:border-brand-pink/60"
+                }`}
+              >
+                <button
+                  onClick={() => handleComplete(task.id)}
+                  disabled={isPending}
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 border-brand-pink-dark bg-white transition-all hover:border-brand-green hover:bg-brand-pink-light disabled:opacity-60"
+                  title="Mark complete"
                 >
-                  {isCompleted ? "Completed" : "Pending"}
-                </span>
-
-                {!isCompleted ? (
-                  <button
-                    type="button"
-                    onClick={() => handleMarkComplete(task.id)}
-                    disabled={completingTaskId !== null}
-                    className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {completingTaskId === task.id ? "Saving..." : "Mark complete"}
-                  </button>
-                ) : null}
+                  {isPending ? (
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-brand-green" />
+                  ) : null}
+                </button>
+                <span className="text-lg">{config.emoji}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-brand-dark">{config.label}</p>
+                  {task.due_date && (
+                    <p
+                      className={`text-xs ${
+                        isOverdue ? "font-bold text-red-600" : "text-brand-dark/50 font-medium"
+                      }`}
+                    >
+                      {isOverdue ? "Overdue: " : "Due: "}
+                      {formatDate(task.due_date)}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          </article>
-        );
-      })}
+            );
+          })}
+        </div>
+      )}
+
+      {completedTasks.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-brand-dark/40 uppercase tracking-wider">Completed</h4>
+          {completedTasks.slice(0, 3).map((task) => {
+            const config = TASK_CONFIG[task.task_type] || {
+              emoji: "📋",
+              label: task.task_type,
+            };
+
+            return (
+              <div
+                key={task.id}
+                className="flex items-center gap-3 rounded-lg border border-brand-pink/10 bg-brand-pink-light/50 p-3 opacity-60"
+              >
+                <div className="flex h-5 w-5 items-center justify-center rounded border-2 border-brand-green bg-brand-green">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="h-3 w-3 text-white"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <span className="text-lg">{config.emoji}</span>
+                <p className="font-medium text-brand-dark/60 line-through">
+                  {config.label}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

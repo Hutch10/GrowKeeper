@@ -1,115 +1,33 @@
-import { PageShell } from "@/components/layout/page-shell";
-import { getDashboardData } from "@/app/actions/dashboard";
-import { formatDate } from "@/lib/date";
-import { UpcomingTasksList } from "@/components/dashboard/upcoming-tasks-list";
 import { redirect } from "next/navigation";
+import { getDashboardData } from "@/app/actions/dashboard";
+import { getSpecimens } from "@/app/actions/specimen-actions";
+import { getWeatherData } from "@/app/actions/weather";
+import { DashboardClient } from "@/components/dashboard/dashboard-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const dashboard = await getDashboardData();
+  const [dashboardData, specimensData, weatherData] = await Promise.all([
+    getDashboardData(),
+    getSpecimens(),
+    getWeatherData(),
+  ]);
 
-  if (!dashboard.success && dashboard.error === "Not signed in") {
-    redirect("/auth?next=/dashboard");
+  if (!dashboardData.success || !specimensData.success) {
+    // If not signed in (and not in bypass mode), redirect to auth
+    if (dashboardData.error === "Not signed in") {
+      redirect("/auth?next=/dashboard");
+    }
+    
+    // For other errors, we can still try to render what we can or show an error
+    // In Guest Mode, success should be true.
   }
 
-  const summary = dashboard.success
-    ? dashboard.data.summary
-    : { totalPlants: 0, totalIncompleteTasks: 0, totalCareEvents: 0 };
-  const upcomingTasks = dashboard.success ? dashboard.data.upcomingTasks : [];
-  const recentActivity = dashboard.success ? dashboard.data.recentActivity : [];
+  const initialData = {
+    specimens: specimensData.data || [],
+    summary: dashboardData.data?.summary || { totalSpecimens: 0, totalIncompleteTasks: 0, totalCareEvents: 0 },
+    weather: weatherData.data,
+  };
 
-  return (
-    <main className="min-h-screen bg-slate-50 font-[family-name:var(--font-geist-sans)] text-slate-900">
-      <PageShell
-        title="Dashboard"
-        subtitle="Monitor your plants, tasks, and latest care activity."
-      >
-        {!dashboard.success && dashboard.error !== "Not signed in" ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            Dashboard query failure
-          </div>
-        ) : null}
-
-        {dashboard.success ? (
-          <>
-        <section className="space-y-5">
-          <h2 className="text-xl font-semibold text-slate-900">Collection Summary</h2>
-          <div className="grid gap-5 md:grid-cols-3">
-            <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Total Plants</p>
-              <p className="mt-3 text-3xl font-bold text-slate-900">{summary.totalPlants}</p>
-            </article>
-            <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Incomplete Tasks</p>
-              <p className="mt-3 text-3xl font-bold text-slate-900">
-                {summary.totalIncompleteTasks}
-              </p>
-            </article>
-            <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Care Events</p>
-              <p className="mt-3 text-3xl font-bold text-slate-900">{summary.totalCareEvents}</p>
-            </article>
-          </div>
-        </section>
-
-        <section className="space-y-5">
-          <h2 className="text-xl font-semibold text-slate-900">Upcoming Tasks</h2>
-          <UpcomingTasksList tasks={upcomingTasks} />
-        </section>
-
-        <section className="space-y-5">
-          <h2 className="text-xl font-semibold text-slate-900">Recent Care Activity</h2>
-          {recentActivity.length === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-              No recent care activity
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {recentActivity.map((event) => {
-                const eventEmoji: Record<string, string> = {
-                  watered: "💧",
-                  fertilized: "🌱",
-                  pruned: "✂️",
-                  repotted: "🪴",
-                };
-                const plantNickname = Array.isArray(event.plant)
-                  ? (event.plant[0]?.nickname ?? "Unknown plant")
-                  : (event.plant?.nickname ?? "Unknown plant");
-                
-                return (
-                  <article
-                    key={event.id}
-                    className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">{eventEmoji[event.event_type] || "📝"}</span>
-                      <div className="flex-1 space-y-1.5">
-                        <div className="flex items-baseline justify-between gap-4">
-                          <p className="text-base font-semibold capitalize text-slate-900">
-                            {event.event_type}
-                          </p>
-                          <p className="text-xs text-slate-500">{formatDate(event.created_at)}</p>
-                        </div>
-                        <p className="text-sm text-slate-600">
-                          {plantNickname}
-                        </p>
-                        {event.notes && (
-                          <p className="mt-2 text-sm leading-relaxed text-slate-700">
-                            {event.notes}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </section>
-          </>
-        ) : null}
-      </PageShell>
-    </main>
-  );
+  return <DashboardClient initialData={initialData} />;
 }

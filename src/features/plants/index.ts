@@ -1,3 +1,3 @@
-import type { Plant } from "@/types/plant";
-
-export const plantsSeedData: Plant[] = [];
+import type { Specimen } from "@/types/specimen";
+ 
+export const plantsSeedData: Specimen[] = [];

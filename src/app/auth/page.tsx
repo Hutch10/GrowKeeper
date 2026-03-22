@@ -36,7 +36,7 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
   const redirectTo = sanitizeNext(typeof raw === "string" ? raw : undefined);
 
   return (
-    <main className="min-h-screen bg-slate-50 font-[family-name:var(--font-geist-sans)] text-slate-900">
+    <main className="min-h-screen bg-brand-warm font-[family-name:var(--font-geist-sans)] text-brand-dark">
       <PageShell
         title="Welcome to GrowKeeper"
         subtitle="Sign in or create an account to manage your plants."

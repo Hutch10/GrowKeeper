@@ -3,17 +3,17 @@
 import type { CareEventType, TaskType } from "@/types/database";
 import type { ActionResult } from "@/app/actions/types";
 import { getAuthenticatedUser } from "@/lib/auth-server";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createClient } from "@/lib/supabase-server";
 
 export interface DashboardUpcomingTask {
   id: string;
   user_id: string | null;
-  plant_id: string;
+  specimen_id: string;
   task_type: TaskType;
   due_date: string | null;
   completed: boolean;
   created_at: string;
-  plant:
+  specimen:
     | {
         nickname: string;
       }
@@ -29,7 +29,7 @@ export interface DashboardRecentEvent {
   event_type: CareEventType;
   notes: string | null;
   created_at: string;
-  plant:
+  specimen:
     | {
         nickname: string;
       }
@@ -40,7 +40,7 @@ export interface DashboardRecentEvent {
 }
 
 export interface DashboardSummary {
-  totalPlants: number;
+  totalSpecimens: number;
   totalIncompleteTasks: number;
   totalCareEvents: number;
 }
@@ -58,7 +58,23 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
     return { success: false, data: null, error: "Not signed in" };
   }
 
-  const supabase = createServerSupabaseClient();
+  if (auth.data.id === "guest-user") {
+    return {
+      success: true,
+      error: null,
+      data: {
+        summary: {
+          totalSpecimens: 0,
+          totalIncompleteTasks: 0,
+          totalCareEvents: 0,
+        },
+        upcomingTasks: [],
+        recentActivity: [],
+      },
+    };
+  }
+
+  const supabase = createClient();
 
   try {
     const [
@@ -77,14 +93,14 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
       supabase.from("plant_events").select("*", { count: "exact", head: true }).eq("user_id", auth.data.id),
       supabase
         .from("tasks")
-        .select("id, user_id, plant_id, task_type, due_date, completed, created_at, plant:plants(nickname)")
+        .select("id, user_id, specimen_id:plant_id, task_type, due_date, completed, created_at, specimen:plants(nickname)")
         .eq("user_id", auth.data.id)
         .eq("completed", false)
         .order("due_date", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false }),
       supabase
         .from("plant_events")
-        .select("id, user_id, event_type, notes, created_at, plant:plants(nickname)")
+        .select("id, user_id, event_type, notes, created_at, specimen:plants(nickname)")
         .eq("user_id", auth.data.id)
         .order("created_at", { ascending: false })
         .limit(10),
@@ -116,7 +132,7 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
     }
 
     const summary: DashboardSummary = {
-      totalPlants: plantsCountResult.count ?? 0,
+      totalSpecimens: plantsCountResult.count ?? 0,
       totalIncompleteTasks: incompleteTasksCountResult.count ?? 0,
       totalCareEvents: careEventsCountResult.count ?? 0,
     };

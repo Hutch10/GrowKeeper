@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/app/actions/types";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createClient } from "@/lib/supabase-server";
 
 type AuthResultData = {
   email: string | null;
@@ -23,7 +23,7 @@ export async function signUpWithPassword(
     };
   }
 
-  const supabase = createServerSupabaseClient();
+  const supabase = createClient();
   const { data, error } = await supabase.auth.signUp({
     email: trimmedEmail,
     password,
@@ -66,7 +66,7 @@ export async function signInWithPassword(
     };
   }
 
-  const supabase = createServerSupabaseClient();
+  const supabase = createClient();
   const { data, error } = await supabase.auth.signInWithPassword({
     email: trimmedEmail,
     password,
@@ -90,7 +90,7 @@ export async function signInWithPassword(
 }
 
 export async function signOut(): Promise<ActionResult<{ message: string }>> {
-  const supabase = createServerSupabaseClient();
+  const supabase = createClient();
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
 

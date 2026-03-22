@@ -1,3 +1,3 @@
-import type { Reminder } from "@/types/plant";
+import type { Reminder } from "@/types/specimen";
 
 export const remindersSeedData: Reminder[] = [];

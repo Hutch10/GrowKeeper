@@ -1,0 +1,123 @@
+{
+  "common": {
+    "appName": "GrowKeeper",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "noResults": "No results found",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "notSignedIn": "Not signed in"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "plants": "Plants",
+    "reminders": "Reminders",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Monitor your plants, tasks, and latest care activity.",
+    "totalPlants": "Total Plants",
+    "incompleteTasks": "Incomplete Tasks",
+    "careEvents": "Care Events",
+    "upcomingTasks": "Upcoming Tasks",
+    "recentActivity": "Recent Care Activity",
+    "noTasks": "No upcoming tasks",
+    "noActivity": "No recent care activity"
+  },
+  "plants": {
+    "title": "My Plants",
+    "subtitle": "Manage your plant collection",
+    "addPlant": "Add Plant",
+    "noPlants": "No plants yet",
+    "addFirstPlant": "Add your first plant to start tracking its care.",
+    "searchPlaceholder": "Search plants...",
+    "plantCount": "{count, plural, =0 {No plants} =1 {1 plant} other {# plants}} in your collection"
+  },
+  "plantForm": {
+    "addTitle": "Add New Plant",
+    "editTitle": "Edit Plant",
+    "nickname": "Nickname",
+    "nicknamePlaceholder": "e.g., Office Fern, Kitchen Basil",
+    "nicknameRequired": "Nickname is required",
+    "species": "Species Name",
+    "speciesPlaceholder": "e.g., Nephrolepis exaltata",
+    "speciesOptional": "(optional)",
+    "notes": "Notes",
+    "notesPlaceholder": "Any special care instructions or notes...",
+    "notesOptional": "(optional)",
+    "backToPlants": "Back to Plants"
+  },
+  "careEvents": {
+    "logCare": "Log Care",
+    "water": "Water",
+    "fertilize": "Fertilize",
+    "prune": "Prune",
+    "repot": "Repot",
+    "addNote": "+ Add note",
+    "careHistory": "Care History",
+    "noCareEvents": "No care events yet.",
+    "logFirstCare": "Log your first care activity above.",
+    "logged": "{type} logged!"
+  },
+  "tasks": {
+    "title": "Tasks",
+    "addTask": "Add Task",
+    "noTasks": "No tasks yet.",
+    "addFirstTask": "Add a task to track upcoming care.",
+    "taskType": "Task Type",
+    "dueDate": "Due Date",
+    "dueDateOptional": "(optional)",
+    "overdue": "Overdue",
+    "dueToday": "Due Today",
+    "upcoming": "Upcoming",
+    "completed": "Completed",
+    "markComplete": "Mark complete"
+  },
+  "reminders": {
+    "title": "Reminders",
+    "subtitle": "Stay on top of your plant care schedule",
+    "allCaughtUp": "All caught up!",
+    "noPendingTasks": "No pending tasks. Add tasks to your plants to get reminders.",
+    "viewPlants": "View Plants",
+    "thisWeek": "This Week",
+    "later": "Later"
+  },
+  "gamification": {
+    "level": "Level {level}",
+    "points": "{points} points",
+    "streak": "{days}-day streak",
+    "badges": "Badges",
+    "newBadge": "New badge unlocked!",
+    "noBadges": "No badges yet. Complete tasks to earn badges!"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "notifications": "Notifications",
+    "emailReminders": "Email Reminders",
+    "emailRemindersDesc": "Receive daily email reminders for due tasks",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "language": "Language",
+    "exportData": "Export Data",
+    "exportDataDesc": "Download all your plant data as JSON",
+    "dangerZone": "Danger Zone",
+    "deleteAccount": "Delete Account"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "notSignedIn": "Please sign in to continue.",
+    "plantNotFound": "Plant not found.",
+    "failedToLoad": "Failed to load data.",
+    "failedToSave": "Failed to save changes."
+  }
+}

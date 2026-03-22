@@ -69,8 +69,8 @@ export async function testSupabaseConnection(): Promise<DiagnosticResult> {
 
   // Check 2: Try to connect and query
   try {
-    const { createServerSupabaseClient } = await import("@/lib/supabase-server");
-    const supabase = createServerSupabaseClient();
+    const { createClient } = await import("@/lib/supabase-server");
+    const supabase = createClient();
 
     const { error } = await supabase
       .from("plants")

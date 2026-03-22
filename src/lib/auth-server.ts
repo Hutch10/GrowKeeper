@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { ActionResult } from "@/app/actions/types";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createClient } from "@/lib/supabase-server";
 
 type AuthUser = {
   id: string;
@@ -9,8 +9,19 @@ type AuthUser = {
 };
 
 export async function getAuthenticatedUser(): Promise<ActionResult<AuthUser>> {
+  if (process.env.NEXT_PUBLIC_SKIP_AUTH === "true" && process.env.NODE_ENV === "development") {
+    return {
+      success: true,
+      data: {
+        id: "guest-user",
+        email: "guest@example.com",
+      },
+      error: null,
+    };
+  }
+
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = createClient();
     const { data, error } = await supabase.auth.getUser();
 
     if (error || !data.user) {
@@ -38,4 +49,16 @@ export async function getAuthenticatedUser(): Promise<ActionResult<AuthUser>> {
 
     return { success: false, data: null, error: "Not signed in" };
   }
+}
+
+/**
+ * Centrally enforced authentication guard.
+ * Throws an error or returns the user if authenticated.
+ */
+export async function requireUser(): Promise<AuthUser> {
+  const auth = await getAuthenticatedUser();
+  if (!auth.success) {
+    throw new Error("Unauthorized access. Please sign in to continue.");
+  }
+  return auth.data;
 }

@@ -1,3 +1,3 @@
-import type { CareEvent } from "@/types/plant";
+import type { CareEvent } from "@/types/specimen";
 
 export const careEventsSeedData: CareEvent[] = [];
