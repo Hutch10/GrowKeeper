@@ -68,6 +68,8 @@ export async function addSpecimenEvent(
     event_type: data.event_type || "observation",
     notes: data.notes?.trim() || null,
     created_at: new Date().toISOString(),
+    last_modified: new Date().toISOString(),
+    last_action_type: "CREATE",
   };
 
   try {
@@ -149,6 +151,8 @@ export async function updateSpecimenEvent(
 
   const payload: SpecimenEventUpdate = {
     ...data,
+    last_modified: new Date().toISOString(),
+    last_action_type: "UPDATE",
   };
 
   try {
