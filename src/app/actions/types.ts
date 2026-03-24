@@ -12,16 +12,22 @@ export type ActionResult<T> =
       success: true;
       data: T;
       error: null;
+      retryable?: boolean;
     }
   | {
       success: false;
       data: null;
       error: string;
+      retryable?: boolean;
     };
 
-import type { Kingdom, Specimen as SpecimenRow, PlantSpecimen, FungalSpecimen, AnimaliaSpecimen, OtherSpecimen, BaseSpecimen } from "@/types/specimen";
+import type { Kingdom, BaseSpecimen } from "@/types/specimen";
 
-export type { Kingdom, SpecimenRow, PlantSpecimen, FungalSpecimen, AnimaliaSpecimen, OtherSpecimen, BaseSpecimen };
+export type SpecimenRow = BaseSpecimen;
+export type PlantSpecimen = BaseSpecimen & Record<string, unknown>;
+export type FungalSpecimen = BaseSpecimen & Record<string, unknown>;
+export type AnimaliaSpecimen = BaseSpecimen & Record<string, unknown>;
+export type { Kingdom, BaseSpecimen };
 
 // Payload for actions like listing a specimen for sale
 export interface SpecimenActionPayload {
@@ -36,5 +42,7 @@ export interface SpecimenEventRow {
   specimen_id: string;
   event_type: string;
   notes: string | null;
+  hardware_attestation?: string | null;
+  hardware_signature?: string | null;
   created_at: string;
 }

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase-server";
-import { GUEST_ID } from "./shared-memory";
 import type { Database } from "@/types/database";
 import type { SpecimenRow } from "./types";
+import { getSpecimens } from "./specimen-actions";
 
 export type PublicProfile = Database["public"]["Tables"]["profiles"]["Row"] & {
   nickname: string;
@@ -12,26 +12,7 @@ export type PublicProfile = Database["public"]["Tables"]["profiles"]["Row"] & {
   thriving_count: number;
 };
 
-import { getSpecimens } from "./specimen-actions";
-
 export async function getPublicProfile(id: string) {
-  if (id === GUEST_ID) {
-    return {
-      success: true,
-      data: {
-        id: GUEST_ID,
-        email: "guest@growkeeper.local",
-        created_at: new Date().toISOString(),
-        nickname: "Guest Explorer",
-        avatar_url: undefined,
-        bio: "A humble guest specimen researcher.",
-        plants: [],
-        total_plants: 0,
-        thriving_count: 0,
-      } as PublicProfile,
-    };
-  }
-
   const supabase = createClient();
   const { data: profile, error } = await supabase
     .from("profiles")
@@ -58,17 +39,13 @@ export async function getPublicProfile(id: string) {
     bio: (p as Record<string, unknown>).bio as string | undefined,
     plants,
     total_plants: plants.length,
-    thriving_count: plants.filter(plant => plant.health_status === "Thriving").length,
+    thriving_count: plants.filter(plant => plant.health > 80).length,
   };
 
   return { success: true, data: publicProfile };
 }
 
 export async function updateProfile(id: string, updates: Partial<Database["public"]["Tables"]["profiles"]["Update"]>) {
-  if (id === GUEST_ID) {
-    return { success: true };
-  }
-
   const supabase = createClient();
   const { data, error } = await supabase
     .from("profiles")

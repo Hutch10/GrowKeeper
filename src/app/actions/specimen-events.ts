@@ -1,101 +1,90 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Database, CareEventType } from "@/types/database";
-import type { ActionResult, SpecimenEventRow } from "@/app/actions/types";
+import type { Database } from "@/types/database";
+import type { ActionResult } from "@/app/actions/types";
 import { getAuthenticatedUser } from "@/lib/auth-server";
 import { createClient } from "@/lib/supabase-server";
-import { GUEST_ID } from "./shared-memory";
+import { checkMutationGuard } from "@/lib/mutation-utility";
+import { normalizeActionError } from "@/lib/error-normalization";
 
-type SpecimenEventInsert = Database["public"]["Tables"]["plant_events"]["Insert"];
-
-type SpecimenOwnershipCheckResult =
-  | { ok: true }
-  | { ok: false; error: string };
+type SpecimenEventRow = Database["public"]["Tables"]["specimen_events"]["Row"];
+type SpecimenEventInsert = Database["public"]["Tables"]["specimen_events"]["Insert"];
+type SpecimenEventUpdate = Database["public"]["Tables"]["specimen_events"]["Update"];
 
 async function verifySpecimenOwnership(
   supabase: ReturnType<typeof createClient>,
   userId: string,
   specimenId: string,
-): Promise<SpecimenOwnershipCheckResult> {
-  if (userId === GUEST_ID) return { ok: true };
-
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const { data: specimen, error } = await supabase
-    .from("plants")
+    .from("specimens")
     .select("id")
     .eq("id", specimenId)
     .eq("user_id", userId)
     .maybeSingle();
 
   if (error) {
-    console.error("Error verifying specimen event ownership:", error);
     return { ok: false, error: "Unable to verify specimen ownership." };
   }
 
   if (!specimen) {
-    return { ok: false, error: "Specimen not found or not owned by the current user." };
+    return { ok: false, error: "Specimen not found or access denied." };
   }
 
   return { ok: true };
 }
 
-import { z } from "zod";
-
-const addSpecimenEventSchema = z.object({
-  specimen_id: z.string().uuid().or(z.string().startsWith("guest-specimen-")),
-  event_type: z.enum(["Watering", "Fertilizing", "Pruning", "Repotting", "Misting", "Other"]),
-  notes: z.string().max(1000).optional().nullable(),
-});
-
-export interface AddSpecimenEventInput {
-  specimen_id: string;
-  event_type: CareEventType;
-  notes?: string;
-}
-
-export async function addSpecimenEvent(data: AddSpecimenEventInput): Promise<ActionResult<SpecimenEventRow>> {
-  const validated = addSpecimenEventSchema.safeParse(data);
-  if (!validated.success) {
-    return { success: false, data: null, error: validated.error.issues[0].message };
-  }
+export async function addSpecimenEvent(
+  specimenId: string,
+  data: Partial<SpecimenEventInsert>,
+): Promise<ActionResult<SpecimenEventRow>> {
   const auth = await getAuthenticatedUser();
 
   if (!auth.success) {
-    return { success: false, data: null, error: "Not signed in" };
+    return { success: false, data: null, error: "Authentication required." };
+  }
+
+  // Phase 1: Mutation Guard
+  const guard = await checkMutationGuard(auth.data.id, "addSpecimenEvent", { specimenId, ...data });
+  if (!guard.allowed) {
+    return { success: false, data: null, error: guard.error || "Action restricted." };
+  }
+
+  if (!specimenId.trim()) {
+    return { success: false, data: null, error: "Invalid specimen id." };
   }
 
   const supabase = createClient();
-  const ownership = await verifySpecimenOwnership(supabase, auth.data.id, data.specimen_id);
+  const ownership = await verifySpecimenOwnership(supabase, auth.data.id, specimenId);
 
   if (!ownership.ok) {
-    return { success: false, data: null, error: ownership.error };
+    return { success: false, data: null, error: ownership.ok ? "" : ownership.error };
   }
 
   const payload: SpecimenEventInsert = {
     user_id: auth.data.id,
-    plant_id: data.specimen_id, // SQL column remains plant_id
-    event_type: data.event_type,
+    specimen_id: specimenId,
+    event_type: data.event_type || "observation",
     notes: data.notes?.trim() || null,
+    created_at: new Date().toISOString(),
   };
 
   try {
     const { data: event, error } = await supabase
-      .from("plant_events")
+      .from("specimen_events")
       .insert(payload)
       .select()
       .single();
 
     if (error) {
-      console.error("Error adding specimen event:", error);
-      return { success: false, data: null, error: error.message };
+      return { success: false, data: null, error: normalizeActionError(error).message };
     }
 
-    revalidatePath("/dashboard");
-    revalidatePath(`/plants/${data.specimen_id}`);
+    revalidatePath(`/plants/${specimenId}`);
     return { success: true, data: event as SpecimenEventRow, error: null };
-  } catch (error) {
-    console.error("Unexpected error:", error);
-    return { success: false, data: null, error: "Failed to add care event" };
+  } catch (err) {
+    return { success: false, data: null, error: normalizeActionError(err).message };
   }
 }
 
@@ -103,76 +92,52 @@ export async function getSpecimenEvents(specimenId: string): Promise<ActionResul
   const auth = await getAuthenticatedUser();
 
   if (!auth.success) {
-    return { success: false, data: null, error: "Not signed in" };
+    return { success: false, data: null, error: "Authentication required." };
+  }
+
+  if (!specimenId.trim()) {
+    return { success: false, data: null, error: "Invalid specimen id." };
   }
 
   const supabase = createClient();
 
   try {
-    const { data: events, error } = await supabase
-      .from("plant_events")
-      .select("id, user_id, plant_id, event_type, notes, created_at")
-      .eq("plant_id", specimenId)
+    const { data, error } = await supabase
+      .from("specimen_events")
+      .select("*")
+      .eq("specimen_id", specimenId)
       .eq("user_id", auth.data.id)
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching specimen events:", error);
-      return { success: false, data: null, error: error.message };
+      return { success: false, data: null, error: normalizeActionError(error).message };
     }
 
-    return { success: true, data: (events ?? []) as unknown as SpecimenEventRow[], error: null };
-  } catch (error) {
-    console.error("Unexpected error:", error);
-    return { success: false, data: null, error: "Failed to fetch care events" };
-  }
-}
-
-export async function deleteSpecimenEvent(eventId: string, specimenId: string): Promise<ActionResult<null>> {
-  const auth = await getAuthenticatedUser();
-
-  if (!auth.success) {
-    return { success: false, data: null, error: "Not signed in" };
-  }
-
-  const supabase = createClient();
-  const ownership = await verifySpecimenOwnership(supabase, auth.data.id, specimenId);
-
-  if (!ownership.ok) {
-    return { success: false, data: null, error: ownership.error };
-  }
-
-  try {
-    const { error } = await supabase
-      .from("plant_events")
-      .delete()
-      .eq("id", eventId)
-      .eq("user_id", auth.data.id)
-      .eq("plant_id", specimenId);
-
-    if (error) {
-      console.error("Error deleting specimen event:", error);
-      return { success: false, data: null, error: error.message };
-    }
-
-    revalidatePath("/dashboard");
-    revalidatePath(`/plants/${specimenId}`);
-    return { success: true, data: null, error: null };
-  } catch (error) {
-    console.error("Unexpected error:", error);
-    return { success: false, data: null, error: "Failed to delete care event" };
+    return { success: true, data: (data ?? []) as SpecimenEventRow[], error: null };
+  } catch (err) {
+    return { success: false, data: null, error: normalizeActionError(err).message };
   }
 }
 
 export async function updateSpecimenEvent(
   eventId: string,
   specimenId: string,
-  data: Partial<AddSpecimenEventInput>,
+  data: Partial<SpecimenEventUpdate>,
 ): Promise<ActionResult<SpecimenEventRow>> {
   const auth = await getAuthenticatedUser();
 
   if (!auth.success) {
-    return { success: false, data: null, error: "Not signed in" };
+    return { success: false, data: null, error: "Authentication required." };
+  }
+
+  // Phase 1: Mutation Guard
+  const guard = await checkMutationGuard(auth.data.id, "updateSpecimenEvent", { eventId, specimenId, data });
+  if (!guard.allowed) {
+    return { success: false, data: null, error: guard.error || "Action restricted." };
+  }
+
+  if (!eventId.trim() || !specimenId.trim()) {
+    return { success: false, data: null, error: "Invalid event update request." };
   }
 
   const supabase = createClient();
@@ -182,29 +147,66 @@ export async function updateSpecimenEvent(
     return { success: false, data: null, error: ownership.error };
   }
 
+  const payload: SpecimenEventUpdate = {
+    ...data,
+  };
+
   try {
-    const { data: event, error } = await supabase
-      .from("plant_events")
-      .update({
-        event_type: data.event_type,
-        notes: data.notes?.trim() || null,
-      })
+    const { data: updatedEvent, error } = await supabase
+      .from("specimen_events")
+      .update(payload)
       .eq("id", eventId)
+      .eq("specimen_id", specimenId)
       .eq("user_id", auth.data.id)
-      .eq("plant_id", specimenId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
-      console.error("Error updating specimen event:", error);
-      return { success: false, data: null, error: error.message };
+      return { success: false, data: null, error: normalizeActionError(error).message };
     }
 
-    revalidatePath("/dashboard");
+    if (!updatedEvent) {
+      return { success: false, data: null, error: "Event not found or unauthorized access." };
+    }
+
     revalidatePath(`/plants/${specimenId}`);
-    return { success: true, data: event as SpecimenEventRow, error: null };
-  } catch (error) {
-    console.error("Unexpected error:", error);
-    return { success: false, data: null, error: "Failed to update care event" };
+    return { success: true, data: updatedEvent as SpecimenEventRow, error: null };
+  } catch (err) {
+    return { success: false, data: null, error: normalizeActionError(err).message };
+  }
+}
+
+export async function deleteSpecimenEvent(
+  eventId: string,
+  specimenId: string,
+): Promise<ActionResult<null>> {
+  const auth = await getAuthenticatedUser();
+
+  if (!auth.success) {
+    return { success: false, data: null, error: "Authentication required." };
+  }
+
+  if (!eventId.trim() || !specimenId.trim()) {
+    return { success: false, data: null, error: "Invalid delete request." };
+  }
+
+  const supabase = createClient();
+
+  try {
+    const { error } = await supabase
+      .from("specimen_events")
+      .delete()
+      .eq("id", eventId)
+      .eq("specimen_id", specimenId)
+      .eq("user_id", auth.data.id);
+
+    if (error) {
+      return { success: false, data: null, error: normalizeActionError(error).message };
+    }
+
+    revalidatePath(`/plants/${specimenId}`);
+    return { success: true, data: null, error: null };
+  } catch (err) {
+    return { success: false, data: null, error: normalizeActionError(err).message };
   }
 }

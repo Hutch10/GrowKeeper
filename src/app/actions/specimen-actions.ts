@@ -1,62 +1,30 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Database } from "@/types/database";
+
 import type { ActionResult, SpecimenRow } from "@/app/actions/types";
 import { getAuthenticatedUser } from "@/lib/auth-server";
 import { createClient } from "@/lib/supabase-server";
+import { checkMutationGuard } from "@/lib/mutation-utility";
+import { normalizeActionError } from "@/lib/error-normalization";
 
 // Simple in-memory storage for Guest Mode session persistence
-import { GUEST_ID, guestSpecimensMemory } from "./shared-memory";
+// Removed shared-memory guest mode imports for strict auth enforcement
 
-import { z } from "zod";
+import { RAIS_CONSTITUTION } from "@/lib/rais-constitution";
+import {
+  addSpecimenSchema,
+  updateSpecimenSchema,
+  type AddSpecimenInput as BaseAddInput,
+  type UpdateSpecimenInput as BaseUpdateInput,
+} from "@/lib/validations/specimen";
 
-const baseSpecimenSchema = z.object({
-  nickname: z.string().min(1, "Nickname is required").max(100),
-  species_name: z.string().max(100).optional().nullable(),
-  location: z.string().max(100).optional().nullable(),
-  notes: z.string().max(1000).optional().nullable(),
-  hardware_attestation_statement: z.string().optional().nullable(),
-});
 
-const plantSchema = baseSpecimenSchema.extend({
-  kingdom: z.literal("Plantae"),
-  light: z.string().max(100).optional().nullable(),
-  watering: z.string().max(100).optional().nullable(),
-  fertilizer: z.string().max(100).optional().nullable(),
-});
+export type AddSpecimenInput = BaseAddInput & { image?: FormData };
+export type UpdateSpecimenInput = BaseUpdateInput & { image?: FormData };
 
-const fungalSchema = baseSpecimenSchema.extend({
-  kingdom: z.literal("Fungi"),
-  substrate: z.string().max(100).optional().nullable(),
-  misting_schedule: z.string().max(100).optional().nullable(),
-  fertilizer: z.string().max(100).optional().nullable(),
-});
 
-const animaliaSchema = baseSpecimenSchema.extend({
-  kingdom: z.literal("Animalia"),
-  heart_rate: z.number().int().optional().nullable(),
-  activity_level: z.number().int().optional().nullable(),
-  dietary_notes: z.string().max(1000).optional().nullable(),
-});
 
-const addSpecimenSchema = z.discriminatedUnion("kingdom", [
-  plantSchema,
-  fungalSchema,
-  animaliaSchema,
-  baseSpecimenSchema.extend({ kingdom: z.literal("Other") }),
-]);
-
-const updateSpecimenSchema = z.intersection(
-  z.object({ id: z.string().uuid().or(z.string().startsWith("guest-specimen-")) }),
-  addSpecimenSchema
-);
-
-export type AddSpecimenInput = z.infer<typeof addSpecimenSchema> & { image?: FormData };
-export type UpdateSpecimenInput = z.infer<typeof updateSpecimenSchema> & { image?: FormData };
-
-type SpecimenInsert = Database["public"]["Tables"]["plants"]["Insert"];
-type SpecimenUpdate = Database["public"]["Tables"]["plants"]["Update"];
 
 export async function addSpecimen(data: AddSpecimenInput): Promise<ActionResult<SpecimenRow>> {
   const validated = addSpecimenSchema.safeParse(data);
@@ -66,53 +34,27 @@ export async function addSpecimen(data: AddSpecimenInput): Promise<ActionResult<
   const auth = await getAuthenticatedUser();
 
   if (!auth.success) {
-    return { success: false, data: null, error: "Not signed in" };
+    return { success: false, data: null, error: "Authentication required. Please sign in." };
+  }
+
+  // Phase 1: Mutation Guard (Idempotency & Throttling)
+  const guard = await checkMutationGuard(auth.data.id, "addSpecimen", data);
+  if (!guard.allowed) {
+    return { success: false, data: null, error: guard.error || "Action restricted." };
   }
 
   const commonData = {
     nickname: data.nickname.trim(),
-    species_name: data.species_name?.trim() || null,
-    location: data.location?.trim() || null,
+    species_name: data.species_name?.trim() || "Unknown",
     notes: data.notes?.trim() || null,
-    happiness_score: 100,
-    health_status: "Newbie",
-    moisture_level: 50,
-    light_level: 5,
-    temp_c: 21,
+    health: 100,
+    telemetry: {
+      moisture: 0.5,
+      light: 0.5,
+      temperature: 21,
+    },
     created_at: new Date().toISOString(),
   };
-
-  if (auth.data.id === GUEST_ID) {
-    const newSpecimen = {
-      ...commonData,
-      id: "guest-specimen-" + Date.now(),
-      user_id: GUEST_ID,
-      kingdom: data.kingdom,
-      image_url: null,
-      hardware_attestation_statement: data.hardware_attestation_statement || null,
-      ...(data.kingdom === "Plantae" ? {
-        light: data.light?.trim() || null,
-        watering: data.watering?.trim() || null,
-        fertilizer: data.fertilizer?.trim() || null,
-      } : data.kingdom === "Fungi" ? {
-        substrate: data.substrate?.trim() || null,
-        misting_schedule: data.misting_schedule?.trim() || null,
-        fertilizer: data.fertilizer?.trim() || null,
-        light: null,
-        watering: null,
-      } : data.kingdom === "Animalia" ? {
-        heart_rate: data.heart_rate || null,
-        activity_level: data.activity_level || null,
-        dietary_notes: data.dietary_notes?.trim() || null,
-        light: null,
-        watering: null,
-        fertilizer: null,
-      } : {}),
-    } as SpecimenRow;
-    
-    guestSpecimensMemory.push(newSpecimen);
-    return { success: true, data: newSpecimen, error: null };
-  }
 
   const supabase = createClient();
 
@@ -125,7 +67,7 @@ export async function addSpecimen(data: AddSpecimenInput): Promise<ActionResult<
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("plant-images")
+        .from("specimen-images")
         .upload(filePath, file);
 
       if (uploadError) {
@@ -134,60 +76,55 @@ export async function addSpecimen(data: AddSpecimenInput): Promise<ActionResult<
       }
 
       const { data: publicUrlData } = supabase.storage
-        .from("plant-images")
+        .from("specimen-images")
         .getPublicUrl(filePath);
       
       imageUrl = publicUrlData.publicUrl;
     }
   }
 
-  const payload: SpecimenInsert = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const payload: any = {
     user_id: auth.data.id,
-    nickname: data.nickname.trim(),
-    species_name: data.species_name?.trim() || null,
-    location: data.location?.trim() || null,
+    nickname: commonData.nickname,
+    species_name: commonData.species_name,
     kingdom: data.kingdom,
-    notes: data.notes?.trim() || null,
+    notes: commonData.notes,
     image_url: imageUrl,
     hardware_attestation_statement: data.hardware_attestation_statement || null,
-    happiness_score: 100,
-    health_status: "Newbie",
-    moisture_level: 50,
-    light_level: 5,
-    temp_c: 21,
-    ...(data.kingdom === "Plantae" ? {
-      light: data.light?.trim() || null,
-      watering: data.watering?.trim() || null,
-      fertilizer: data.fertilizer?.trim() || null,
-    } : data.kingdom === "Fungi" ? {
-      substrate: data.substrate?.trim() || null,
-      misting_schedule: data.misting_schedule?.trim() || null,
-      fertilizer: data.fertilizer?.trim() || null,
-    } : data.kingdom === "Animalia" ? {
-      heart_rate: data.heart_rate || null,
-      activity_level: data.activity_level || null,
-      dietary_notes: data.dietary_notes?.trim() || null,
-    } : {}),
+    last_vital_signature: data.last_vital_signature || null,
+    health: commonData.health,
+    telemetry: commonData.telemetry,
+    created_at: commonData.created_at,
+    last_modified: commonData.created_at,
+    last_action_type: "CREATE",
   };
+
+  const raisResult = RAIS_CONSTITUTION.validateSpecimen(payload as Partial<SpecimenRow>);
+  payload.compliance_status = raisResult.status;
 
   try {
     const { data: specimen, error } = await supabase
-      .from("plants")
+      .from("specimens")
       .insert(payload)
       .select()
       .single();
 
     if (error) {
-      console.error("Error adding specimen:", error);
-      return { success: false, data: null, error: error.message };
+      if (imageUrl) {
+        const filePath = imageUrl.split("/").pop();
+        if (filePath) {
+          await supabase.storage.from("specimen-images").remove([`${auth.data.id}/${filePath}`]);
+        }
+      }
+      return { success: false, data: null, error: normalizeActionError(error).message };
     }
 
     revalidatePath("/dashboard");
     revalidatePath("/");
     return { success: true, data: specimen as unknown as SpecimenRow, error: null };
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return { success: false, data: null, error: "Failed to add specimen" };
+    return { success: false, data: null, error: normalizeActionError(error).message };
   }
 }
 
@@ -195,35 +132,25 @@ export async function getSpecimens(): Promise<ActionResult<SpecimenRow[]>> {
   const auth = await getAuthenticatedUser();
 
   if (!auth.success) {
-    return { success: false, data: null, error: "Not signed in" };
+    return { success: false, data: null, error: "Authentication required." };
   }
 
   const supabase = createClient();
 
   try {
-    if (auth.data.id === GUEST_ID) {
-      return {
-        success: true,
-        data: [...guestSpecimensMemory].reverse() as SpecimenRow[],
-        error: null,
-      };
-    }
-
     const { data: specimens, error } = await supabase
-      .from("plants")
-      .select("id, user_id, nickname, species_name, notes, created_at, location, light, watering, fertilizer, image_url, happiness_score, health_status, moisture_level, light_level, temp_c, hardware_attestation_statement")
+      .from("specimens")
+      .select("*")
       .eq("user_id", auth.data.id)
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching specimens:", error);
-      return { success: false, data: null, error: error.message };
+      return { success: false, data: null, error: normalizeActionError(error).message };
     }
 
     return { success: true, data: (specimens ?? []) as unknown as SpecimenRow[], error: null };
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return { success: false, data: null, error: "Failed to fetch specimens" };
+    return { success: false, data: null, error: normalizeActionError(error).message };
   }
 }
 
@@ -231,7 +158,7 @@ export async function getSpecimenById(id: string): Promise<ActionResult<Specimen
   const auth = await getAuthenticatedUser();
 
   if (!auth.success) {
-    return { success: false, data: null, error: "Not signed in" };
+    return { success: false, data: null, error: "Authentication required." };
   }
 
   const supabase = createClient();
@@ -241,38 +168,24 @@ export async function getSpecimenById(id: string): Promise<ActionResult<Specimen
   }
 
   try {
-    if (auth.data.id === GUEST_ID) {
-      const specimen = guestSpecimensMemory.find((p: SpecimenRow) => p.id === id);
-      if (!specimen) {
-        return { success: false, data: null, error: "Specimen not found" };
-      }
-      return {
-        success: true,
-        data: specimen as SpecimenRow,
-        error: null,
-      };
-    }
-
     const { data: specimen, error } = await supabase
-      .from("plants")
-      .select("id, user_id, nickname, species_name, notes, created_at, location, kingdom, light, watering, fertilizer, substrate, misting_schedule, heart_rate, activity_level, dietary_notes, image_url, happiness_score, health_status, moisture_level, light_level, temp_c, hardware_attestation_statement")
+      .from("specimens")
+      .select("*")
       .eq("id", id)
       .eq("user_id", auth.data.id)
       .maybeSingle();
 
     if (error) {
-      console.error("Error fetching specimen by id:", error);
-      return { success: false, data: null, error: "Database connection error" };
+      return { success: false, data: null, error: normalizeActionError(error).message };
     }
 
     if (!specimen) {
-      return { success: false, data: null, error: "Specimen not found" };
+      return { success: false, data: null, error: "The requested specimen was not found." };
     }
 
     return { success: true, data: specimen as unknown as SpecimenRow, error: null };
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return { success: false, data: null, error: "Database connection error" };
+    return { success: false, data: null, error: normalizeActionError(error).message };
   }
 }
 
@@ -284,56 +197,13 @@ export async function updateSpecimen(data: UpdateSpecimenInput): Promise<ActionR
   const auth = await getAuthenticatedUser();
 
   if (!auth.success) {
-    return { success: false, data: null, error: "Not signed in" };
+    return { success: false, data: null, error: "Authentication required." };
   }
 
-  if (!data.id.trim()) {
-    return { success: false, data: null, error: "Specimen not found" };
-  }
-
-  if (auth.data.id === GUEST_ID) {
-    const index = guestSpecimensMemory.findIndex((p: SpecimenRow) => p.id === data.id);
-    if (index === -1) {
-      return { success: false, data: null, error: "Specimen not found" };
-    }
-    const updatedSpecimen = {
-      ...guestSpecimensMemory[index],
-      nickname: data.nickname.trim(),
-      species_name: data.species_name?.trim() || null,
-      location: data.location?.trim() || null,
-      notes: data.notes?.trim() || null,
-      kingdom: data.kingdom,
-      ...(data.kingdom === "Plantae" ? {
-        light: data.light?.trim() || null,
-        watering: data.watering?.trim() || null,
-        fertilizer: data.fertilizer?.trim() || null,
-        substrate: null,
-        misting_schedule: null,
-      } : data.kingdom === "Fungi" ? {
-        substrate: data.substrate?.trim() || null,
-        misting_schedule: data.misting_schedule?.trim() || null,
-        fertilizer: data.fertilizer?.trim() || null,
-        light: null,
-        watering: null,
-      } : data.kingdom === "Animalia" ? {
-        heart_rate: data.heart_rate || null,
-        activity_level: data.activity_level || null,
-        dietary_notes: data.dietary_notes?.trim() || null,
-        light: null,
-        watering: null,
-        fertilizer: null,
-        substrate: null,
-        misting_schedule: null,
-      } : {
-        light: null,
-        watering: null,
-        fertilizer: null,
-        substrate: null,
-        misting_schedule: null,
-      }),
-    } as SpecimenRow;
-    guestSpecimensMemory[index] = updatedSpecimen;
-    return { success: true, data: updatedSpecimen, error: null };
+  // Phase 1: Mutation Guard
+  const guard = await checkMutationGuard(auth.data.id, "updateSpecimen", data);
+  if (!guard.allowed) {
+    return { success: false, data: null, error: guard.error || "Update restricted." };
   }
 
   const supabase = createClient();
@@ -347,7 +217,7 @@ export async function updateSpecimen(data: UpdateSpecimenInput): Promise<ActionR
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("plant-images")
+        .from("specimen-images")
         .upload(filePath, file);
 
       if (uploadError) {
@@ -356,48 +226,31 @@ export async function updateSpecimen(data: UpdateSpecimenInput): Promise<ActionR
       }
 
       const { data: publicUrlData } = supabase.storage
-        .from("plant-images")
+        .from("specimen-images")
         .getPublicUrl(filePath);
       
       imageUrl = publicUrlData.publicUrl;
     }
   }
 
-  const payload: SpecimenUpdate = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const payload: any = {
     nickname: data.nickname.trim(),
-    species_name: data.species_name?.trim() || null,
-    location: data.location?.trim() || null,
+    species_name: data.species_name?.trim() || "Unknown",
     notes: data.notes?.trim() || null,
     kingdom: data.kingdom,
     hardware_attestation_statement: data.hardware_attestation_statement || null,
-    ...(data.kingdom === "Plantae" ? {
-      light: data.light?.trim() || null,
-      watering: data.watering?.trim() || null,
-      fertilizer: data.fertilizer?.trim() || null,
-      substrate: null,
-      misting_schedule: null,
-    } : data.kingdom === "Fungi" ? {
-      substrate: data.substrate?.trim() || null,
-      misting_schedule: data.misting_schedule?.trim() || null,
-      fertilizer: data.fertilizer?.trim() || null,
-      light: null,
-      watering: null,
-    } : data.kingdom === "Animalia" ? {
-      heart_rate: data.heart_rate || null,
-      activity_level: data.activity_level || null,
-      dietary_notes: data.dietary_notes?.trim() || null,
-      light: null,
-      watering: null,
-      fertilizer: null,
-      substrate: null,
-      misting_schedule: null,
-    } : {}),
     ...(imageUrl !== undefined && { image_url: imageUrl }),
+    last_modified: new Date().toISOString(),
+    last_action_type: "UPDATE",
   };
+
+  const raisResult = RAIS_CONSTITUTION.validateSpecimen(payload as Partial<SpecimenRow>);
+  payload.compliance_status = raisResult.status;
 
   try {
     const { data: specimen, error } = await supabase
-      .from("plants")
+      .from("specimens")
       .update(payload)
       .eq("id", data.id)
       .eq("user_id", auth.data.id)
@@ -405,12 +258,17 @@ export async function updateSpecimen(data: UpdateSpecimenInput): Promise<ActionR
       .maybeSingle();
 
     if (error) {
-      console.error("Error updating specimen:", error);
-      return { success: false, data: null, error: error.message };
+      if (imageUrl) {
+        const filePath = imageUrl.split("/").pop();
+        if (filePath) {
+          await supabase.storage.from("specimen-images").remove([`${auth.data.id}/${filePath}`]);
+        }
+      }
+      return { success: false, data: null, error: normalizeActionError(error).message };
     }
 
     if (!specimen) {
-      return { success: false, data: null, error: "Specimen not found" };
+      return { success: false, data: null, error: "Specimen not found or access denied." };
     }
 
     revalidatePath("/plants");
@@ -418,8 +276,7 @@ export async function updateSpecimen(data: UpdateSpecimenInput): Promise<ActionR
     revalidatePath("/dashboard");
     return { success: true, data: specimen as unknown as SpecimenRow, error: null };
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return { success: false, data: null, error: "Failed to update specimen" };
+    return { success: false, data: null, error: normalizeActionError(error).message };
   }
 }
 
@@ -427,7 +284,7 @@ export async function deleteSpecimen(id: string): Promise<ActionResult<null>> {
   const auth = await getAuthenticatedUser();
 
   if (!auth.success) {
-    return { success: false, data: null, error: "Not signed in" };
+    return { success: false, data: null, error: "Authentication required." };
   }
 
   if (!id.trim()) {
@@ -438,21 +295,19 @@ export async function deleteSpecimen(id: string): Promise<ActionResult<null>> {
 
   try {
     const { error } = await supabase
-      .from("plants")
+      .from("specimens")
       .delete()
       .eq("id", id)
       .eq("user_id", auth.data.id);
 
     if (error) {
-      console.error("Error deleting specimen:", error);
-      return { success: false, data: null, error: error.message };
+      return { success: false, data: null, error: normalizeActionError(error).message };
     }
 
     revalidatePath("/plants");
     revalidatePath("/dashboard");
     return { success: true, data: null, error: null };
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return { success: false, data: null, error: "Failed to delete specimen" };
+    return { success: false, data: null, error: normalizeActionError(error).message };
   }
 }

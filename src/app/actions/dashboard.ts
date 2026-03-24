@@ -78,36 +78,36 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
 
   try {
     const [
-      plantsCountResult,
+      specimensCountResult,
       incompleteTasksCountResult,
       careEventsCountResult,
       upcomingTasksResult,
       recentActivityResult,
     ] = await Promise.all([
-      supabase.from("plants").select("*", { count: "exact", head: true }).eq("user_id", auth.data.id),
+      supabase.from("specimens").select("*", { count: "exact", head: true }).eq("user_id", auth.data.id),
       supabase
         .from("tasks")
         .select("*", { count: "exact", head: true })
         .eq("user_id", auth.data.id)
         .eq("completed", false),
-      supabase.from("plant_events").select("*", { count: "exact", head: true }).eq("user_id", auth.data.id),
+      supabase.from("specimen_events").select("*", { count: "exact", head: true }).eq("user_id", auth.data.id),
       supabase
         .from("tasks")
-        .select("id, user_id, specimen_id:plant_id, task_type, due_date, completed, created_at, specimen:plants(nickname)")
+        .select("id, user_id, specimen_id, task_type, due_date, completed, created_at, specimen:specimens(nickname)")
         .eq("user_id", auth.data.id)
         .eq("completed", false)
         .order("due_date", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false }),
       supabase
-        .from("plant_events")
-        .select("id, user_id, event_type, notes, created_at, specimen:plants(nickname)")
+        .from("specimen_events")
+        .select("id, user_id, event_type, notes, created_at, specimen:specimens(nickname)")
         .eq("user_id", auth.data.id)
         .order("created_at", { ascending: false })
         .limit(10),
     ]);
 
-    if (plantsCountResult.error) {
-      console.error("Dashboard plants count error:", plantsCountResult.error);
+    if (specimensCountResult.error) {
+      console.error("Dashboard specimens count error:", specimensCountResult.error);
       return { success: false, data: null, error: "dashboard query failure" };
     }
 
@@ -132,7 +132,7 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
     }
 
     const summary: DashboardSummary = {
-      totalSpecimens: plantsCountResult.count ?? 0,
+      totalSpecimens: specimensCountResult.count ?? 0,
       totalIncompleteTasks: incompleteTasksCountResult.count ?? 0,
       totalCareEvents: careEventsCountResult.count ?? 0,
     };
