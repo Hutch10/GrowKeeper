@@ -112,6 +112,8 @@ export interface Database {
           hardware_attestation: string | null;
           hardware_signature: string | null;
           created_at: string;
+          last_modified: string | null;
+          last_action_type: string | null;
         };
         Insert: {
           id?: string;
@@ -122,6 +124,8 @@ export interface Database {
           hardware_attestation?: string | null;
           hardware_signature?: string | null;
           created_at?: string;
+          last_modified?: string | null;
+          last_action_type?: string | null;
         };
         Update: {
           id?: string;
@@ -132,6 +136,8 @@ export interface Database {
           hardware_attestation?: string | null;
           hardware_signature?: string | null;
           created_at?: string;
+          last_modified?: string | null;
+          last_action_type?: string | null;
         };
         Relationships: [
           {
