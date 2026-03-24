@@ -6,13 +6,13 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type CareEventType = "watered" | "fertilized" | "pruned" | "repotted";
+export type CareEventType = "watered" | "fertilized" | "pruned" | "repotted" | "observation";
 export type TaskType = "watered" | "fertilized" | "prune" | "repot" | "inspect";
 
 export interface Database {
   public: {
     Tables: {
-      plants: {
+      specimens: {
         Row: {
           id: string;
           user_id: string | null;
@@ -36,7 +36,11 @@ export interface Database {
           activity_level: number | null;
           dietary_notes: string | null;
           hardware_attestation_statement: string | null;
+          last_vital_signature: string | null;
+          compliance_status: string | null;
           created_at: string;
+          last_modified: string | null;
+          last_action_type: string | null;
         };
         Insert: {
           id?: string;
@@ -61,7 +65,11 @@ export interface Database {
           activity_level?: number | null;
           dietary_notes?: string | null;
           hardware_attestation_statement?: string | null;
+          last_vital_signature?: string | null;
+          compliance_status?: string | null;
           created_at?: string;
+          last_modified?: string | null;
+          last_action_type?: string | null;
         };
         Update: {
           id?: string;
@@ -86,40 +94,50 @@ export interface Database {
           activity_level?: number | null;
           dietary_notes?: string | null;
           hardware_attestation_statement?: string | null;
+          last_vital_signature?: string | null;
+          compliance_status?: string | null;
           created_at?: string;
+          last_modified?: string | null;
+          last_action_type?: string | null;
         };
         Relationships: [];
       };
-      plant_events: {
+      specimen_events: {
         Row: {
           id: string;
           user_id: string | null;
-          plant_id: string;
+          specimen_id: string;
           event_type: CareEventType;
           notes: string | null;
+          hardware_attestation: string | null;
+          hardware_signature: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           user_id?: string | null;
-          plant_id: string;
+          specimen_id: string;
           event_type: CareEventType;
           notes?: string | null;
+          hardware_attestation?: string | null;
+          hardware_signature?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           user_id?: string | null;
-          plant_id?: string;
+          specimen_id?: string;
           event_type?: CareEventType;
           notes?: string | null;
+          hardware_attestation?: string | null;
+          hardware_signature?: string | null;
           created_at?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "plant_events_plant_id_fkey";
-            columns: ["plant_id"];
-            referencedRelation: "plants";
+            foreignKeyName: "specimen_events_specimen_id_fkey";
+            columns: ["specimen_id"];
+            referencedRelation: "specimens";
             referencedColumns: ["id"];
           }
         ];
@@ -129,34 +147,40 @@ export interface Database {
           id: string;
           user_id: string | null;
           created_at: string;
-          plant_id: string;
+          specimen_id: string;
           task_type: TaskType;
           due_date: string | null;
           completed: boolean;
+          last_modified: string | null;
+          last_action_type: string | null;
         };
         Insert: {
           id?: string;
           user_id?: string | null;
           created_at?: string;
-          plant_id: string;
+          specimen_id: string;
           task_type: TaskType;
           due_date?: string | null;
           completed?: boolean;
+          last_modified?: string | null;
+          last_action_type?: string | null;
         };
         Update: {
           id?: string;
           user_id?: string | null;
           created_at?: string;
-          plant_id?: string;
+          specimen_id?: string;
           task_type?: TaskType;
           due_date?: string | null;
           completed?: boolean;
+          last_modified?: string | null;
+          last_action_type?: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: "tasks_plant_id_fkey";
-            columns: ["plant_id"];
-            referencedRelation: "plants";
+            foreignKeyName: "tasks_specimen_id_fkey";
+            columns: ["specimen_id"];
+            referencedRelation: "specimens";
             referencedColumns: ["id"];
           }
         ];
@@ -178,6 +202,43 @@ export interface Database {
           created_at?: string;
         };
         Relationships: [];
+      };
+      tester_feedback: {
+        Row: {
+          id: string;
+          user_id: string;
+          route: string;
+          action_attempted: string | null;
+          content: string;
+          error_context: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          route: string;
+          action_attempted?: string | null;
+          content: string;
+          error_context?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          route?: string;
+          action_attempted?: string | null;
+          content?: string;
+          error_context?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tester_feedback_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
       };
     };
     Views: Record<string, never>;
