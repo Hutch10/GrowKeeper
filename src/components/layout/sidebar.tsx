@@ -17,7 +17,7 @@ import {
   X
 } from "lucide-react";
 
-const NAV_ITEMS = [
+const NAV_ITEMS_ALL = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
   { icon: Navigation, label: "Field Instrument", href: "/field" },
   { icon: Leaf, label: "My Specimens", href: "/plants" },
@@ -30,6 +30,13 @@ const NAV_ITEMS = [
   { icon: Settings, label: "Settings", href: "/settings" },
   { icon: HelpCircle, label: "Support", href: "/support" },
 ];
+
+const IS_LOCKDOWN = process.env.NEXT_PUBLIC_ALPHA_LOCKDOWN === 'true';
+const ALLOWED_LABELS = ["Dashboard", "My Specimens", "Tasks", "Settings"];
+
+const NAV_ITEMS = IS_LOCKDOWN 
+  ? NAV_ITEMS_ALL.filter(item => ALLOWED_LABELS.includes(item.label))
+  : NAV_ITEMS_ALL;
 
 interface SidebarProps {
   className?: string;

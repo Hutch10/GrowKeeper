@@ -1,8 +1,38 @@
 import { updateSession } from '@/lib/supabase-middleware';
-import type { NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  // First update/refresh the Supabase session
+  // 1. Alpha Lockdown Logic
+  const isAlphaLockdown = process.env.NEXT_PUBLIC_ALPHA_LOCKDOWN === 'true';
+  const { pathname } = request.nextUrl;
+
+  if (isAlphaLockdown) {
+    // Core Allowed Routes
+    const isAllowed = 
+      pathname === '/' ||
+      pathname.startsWith('/auth') ||
+      pathname.startsWith('/dashboard') ||
+      pathname.startsWith('/plants') ||
+      pathname.startsWith('/tasks') ||
+      pathname.startsWith('/reminders') ||
+      pathname.startsWith('/settings');
+
+    // System/Asset bypasses (API, static assets, etc.)
+    const isSystem = 
+      pathname.startsWith('/api') ||
+      pathname.startsWith('/_next') ||
+      pathname.startsWith('/favicon.ico') ||
+      pathname.startsWith('/manifest.json');
+
+    if (!isAllowed && !isSystem) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/dashboard';
+      url.searchParams.set('notice', 'alpha_locked');
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // 2. Standard Supabase Session Update
   const response = await updateSession(request);
 
   // Security Headers

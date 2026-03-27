@@ -42,7 +42,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isInvestorMode, setIsInvestorMode] = useState(false);
   const [filterKingdom, setFilterKingdom] = useState<string>("All");
-
+  const isAlphaLockdown = process.env.NEXT_PUBLIC_ALPHA_LOCKDOWN === 'true';
 
   const filteredSpecimens = specimens.filter((s: SpecimenRow) => 
     filterKingdom === "All" || s.kingdom === filterKingdom
@@ -66,20 +66,22 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         <DashboardHeader onMenuClick={() => setIsSidebarOpen(true)} />
 
         {/* Investor Mode Toggle */}
-        <div className="flex items-center justify-between mb-8 p-1 bg-slate-100 rounded-2xl w-fit border border-slate-200 shadow-inner">
-          <button 
-            onClick={() => setIsInvestorMode(false)}
-            className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${!isInvestorMode ? 'bg-white text-brand-dark shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            Operational
-          </button>
-          <button 
-            onClick={() => setIsInvestorMode(true)}
-            className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isInvestorMode ? 'bg-brand-dark text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            Investor Mode
-          </button>
-        </div>
+        {!isAlphaLockdown && (
+          <div className="flex items-center justify-between mb-8 p-1 bg-slate-100 rounded-2xl w-fit border border-slate-200 shadow-inner">
+            <button 
+              onClick={() => setIsInvestorMode(false)}
+              className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${!isInvestorMode ? 'bg-white text-brand-dark shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Operational
+            </button>
+            <button 
+              onClick={() => setIsInvestorMode(true)}
+              className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isInvestorMode ? 'bg-brand-dark text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Investor Mode
+            </button>
+          </div>
+        )}
 
         {isInvestorMode ? (
           <InvestorView specimens={specimens} />
@@ -117,18 +119,22 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
             </div>
 
             {/* Marketplace Highlight */}
-            <section className="mb-8 md:mb-12">
-              <div className="flex items-center justify-between mb-4 md:mb-6">
-                <h2 className="text-xl md:text-2xl font-black text-brand-dark">Exclusive Drops</h2>
-                <div className="h-px flex-1 mx-4 md:mx-6 bg-brand-dark/10" />
-              </div>
-              <MarketplacePreview specimen={selectedSpecimen} />
-            </section>
+            {!isAlphaLockdown && (
+              <section className="mb-8 md:mb-12">
+                <div className="flex items-center justify-between mb-4 md:mb-6">
+                  <h2 className="text-xl md:text-2xl font-black text-brand-dark">Exclusive Drops</h2>
+                  <div className="h-px flex-1 mx-4 md:mx-6 bg-brand-dark/10" />
+                </div>
+                <MarketplacePreview specimen={selectedSpecimen} />
+              </section>
+            )}
 
             {/* Sovereign Settlement Feed (Phase 8.0) */}
-            <section className="mb-8 md:mb-12">
-              <SovereignSettlement />
-            </section>
+            {!isAlphaLockdown && (
+              <section className="mb-8 md:mb-12">
+                <SovereignSettlement />
+              </section>
+            )}
           </>
         )}
 
@@ -188,13 +194,15 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         </section>
 
         {/* Institutional ROI Analytics */}
-        <section className="mb-8 md:mb-12">
-          <div className="flex items-center justify-between mb-4 md:mb-6">
-            <h2 className="text-xl md:text-2xl font-black text-brand-dark text-wrap">Institutional Dashboard</h2>
-            <div className="h-px flex-1 mx-4 md:mx-6 bg-brand-dark/10" />
-          </div>
-          <AnalyticsHub />
-        </section>
+        {!isAlphaLockdown && (
+          <section className="mb-8 md:mb-12">
+            <div className="flex items-center justify-between mb-4 md:mb-6">
+              <h2 className="text-xl md:text-2xl font-black text-brand-dark text-wrap">Institutional Dashboard</h2>
+              <div className="h-px flex-1 mx-4 md:mx-6 bg-brand-dark/10" />
+            </div>
+            <AnalyticsHub />
+          </section>
+        )}
 
         {/* Tips & Articles Section */}
         <section className="mb-8">
@@ -225,7 +233,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
           scrollbar-width: none;
         }
       `}</style>
-      <AskConcierge />
+      {!isAlphaLockdown && <AskConcierge />}
     </div>
   );
 }

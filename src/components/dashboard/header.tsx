@@ -34,6 +34,8 @@ export function DashboardHeader({ title, className, onMenuClick }: DashboardHead
     // Simulate a bit of delay for UX
     setTimeout(() => setIsSyncing(false), 1000);
   };
+  const isAlphaLockdown = process.env.NEXT_PUBLIC_ALPHA_LOCKDOWN === 'true';
+
   return (
     <header className={`flex items-center justify-between mb-8 ${className || ""}`}>
       <div className="flex items-center gap-4">
@@ -61,12 +63,12 @@ export function DashboardHeader({ title, className, onMenuClick }: DashboardHead
           {isOnline ? (
             <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
               <Cloud className="w-3 h-3" />
-              <span>Sovereign Link Active</span>
+              <span>{isAlphaLockdown ? "Cloud Sync Active" : "Sovereign Link Active"}</span>
             </div>
           ) : (
             <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-100">
               <WifiOff className="w-3 h-3" />
-              <span>Field Mode (Offline)</span>
+              <span>{isAlphaLockdown ? "Offline Mode" : "Field Mode (Offline)"}</span>
             </div>
           )}
           
