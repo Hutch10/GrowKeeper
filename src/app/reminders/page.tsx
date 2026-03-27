@@ -9,12 +9,12 @@ export const dynamic = "force-dynamic";
 
 interface TaskWithPlant {
   id: string;
-  plant_id: string;
+  specimen_id: string;
   task_type: string;
   due_date: string | null;
   completed: boolean;
   created_at: string;
-  plant: { nickname: string } | null;
+  specimen: { nickname: string } | null;
 }
 
 export default async function RemindersPage() {
@@ -28,7 +28,7 @@ export default async function RemindersPage() {
 
   const { data: tasks, error } = await supabase
     .from("tasks")
-    .select("id, plant_id, task_type, due_date, completed, created_at, plant:plants(nickname)")
+    .select("id, specimen_id, task_type, due_date, completed, created_at, specimen:specimens(nickname)")
     .eq("user_id", auth.data.id)
     .eq("completed", false)
     .order("due_date", { ascending: true, nullsFirst: false })
@@ -86,18 +86,17 @@ export default async function RemindersPage() {
       later: "border-slate-200 bg-white",
     };
 
-    const plantNickname = task.plant?.nickname ?? "Unknown plant";
 
     return (
       <Link
-        href={`/plants/${task.plant_id}`}
+        href={`/plants/${task.specimen_id}`}
         className={`block rounded-lg border p-4 transition-shadow hover:shadow-md ${urgencyStyles[urgency]}`}
       >
         <div className="flex items-start gap-3">
           <span className="text-2xl">{TASK_EMOJI[task.task_type] || "📋"}</span>
           <div className="min-w-0 flex-1">
             <p className="font-semibold capitalize text-slate-900">{task.task_type}</p>
-            <p className="text-sm text-slate-600">{plantNickname}</p>
+            <p className="text-sm text-slate-600">{task.specimen?.nickname ?? "Unknown specimen"}</p>
             {task.due_date && (
               <p className={`mt-1 text-xs ${urgency === "overdue" ? "font-medium text-red-600" : "text-slate-500"}`}>
                 {urgency === "overdue" ? "Overdue: " : "Due: "}

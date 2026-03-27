@@ -35,12 +35,12 @@ export function TasksClient({ initialTasks, specimens }: TasksClientProps) {
   const [isPending, startTransition] = useTransition();
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId);
-  const selectedSpecimen = specimens.find((p) => p.id === selectedTask?.plant_id);
+  const selectedSpecimen = specimens.find((p) => p.id === selectedTask?.specimen_id);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((t) => {
       const isStatusMatch = activeTab === "todo" ? !t.completed : t.completed;
-      const specimen = specimens.find((p) => p.id === t.plant_id);
+      const specimen = specimens.find((p) => p.id === t.specimen_id);
       const isSearchMatch = 
         t.task_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
         specimen?.nickname.toLowerCase().includes(searchQuery.toLowerCase());
@@ -121,7 +121,7 @@ export function TasksClient({ initialTasks, specimens }: TasksClientProps) {
               {filteredTasks.length > 0 ? (
                 filteredTasks.map((task) => {
                   const config = TASK_CONFIG[task.task_type] || { emoji: "📋", label: task.task_type };
-                  const specimen = specimens.find((p) => p.id === task.plant_id);
+                  const specimen = specimens.find((p) => p.id === task.specimen_id);
                   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !task.completed;
                   const isSelected = selectedTaskId === task.id;
 
@@ -139,7 +139,7 @@ export function TasksClient({ initialTasks, specimens }: TasksClientProps) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (!task.completed) handleComplete(task.id, task.plant_id);
+                          if (!task.completed) handleComplete(task.id, task.specimen_id);
                         }}
                         disabled={isPending || task.completed}
                         className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all border-2 shrink-0 ${

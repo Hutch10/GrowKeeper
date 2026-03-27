@@ -44,16 +44,20 @@ export const specimensDB = createSafeDB<Specimen>('growkeeper_specimens');
 export const eventsDB = createSafeDB<CareEvent>('growkeeper_events');
 export const remindersDB = createSafeDB<Reminder>('growkeeper_reminders');
 export const listingsDB = createSafeDB<Listing>('growkeeper_listings');
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const treatmentsDB = createSafeDB<any>('growkeeper_treatments');
 export const logsDB = createSafeDB<object>('growkeeper_logs');
 
 /**
  * Maps a PouchDB document to our application's domain model.
  * PouchDB uses _id and _rev, while our application expects 'id'.
  */
-export function fromPouch<T extends { id: string }>(doc: unknown): T {
-  const d = doc as { _id: string; _rev?: string; updatedAt?: string } & Record<string, unknown>;
-  const { _id, _rev, ...rest } = d;
-  return { ...rest, id: _id, _rev } as unknown as T;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function fromPouch<T>(doc: any): T {
+  const data = { ...doc, id: doc._id };
+  delete data._id;
+  delete data._rev;
+  return data as T;
 }
 
 /**
@@ -87,6 +91,10 @@ export async function initIndexes() {
 
   await logsDB.createIndex({
     index: { fields: ['level', 'timestamp'] }
+  });
+
+  await listingsDB.createIndex({
+    index: { fields: ['specimenId', 'status', 'updatedAt'] }
   });
 }
 

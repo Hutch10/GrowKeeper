@@ -3,10 +3,11 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateSpecimen } from "@/app/actions/specimen-actions";
-import type { SpecimenRow } from "@/app/actions/types";
+import type { BaseSpecimen } from "@/types/specimen";
+import { Shield, Zap, Info } from "lucide-react";
 
 interface EditSpecimenFormProps {
-  specimen: SpecimenRow;
+  specimen: BaseSpecimen;
   onCancel: () => void;
   onSuccess: () => void;
 }
@@ -18,14 +19,13 @@ export function EditSpecimenForm({ specimen, onCancel, onSuccess }: EditSpecimen
 
   const [nickname, setNickname] = useState(specimen.nickname);
   const [speciesName, setSpeciesName] = useState(specimen.species_name || "");
-  const [notes, setNotes] = useState(specimen.notes || "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     if (!nickname.trim()) {
-      setError("Please enter a nickname for your specimen.");
+      setError("Asset identifier required.");
       return;
     }
 
@@ -33,86 +33,77 @@ export function EditSpecimenForm({ specimen, onCancel, onSuccess }: EditSpecimen
       const result = await updateSpecimen({
         id: specimen.id,
         nickname: nickname.trim(),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        kingdom: specimen.kingdom as any,
+        kingdom: specimen.kingdom,
         species_name: speciesName.trim() || undefined,
-        notes: notes.trim() || undefined,
       });
 
       if (result.success) {
         onSuccess();
         router.refresh();
       } else {
-        setError(result.error || "Failed to update specimen.");
+        setError(result.error || "Registry update failed.");
       }
     });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-6 bg-[#080808] p-8 rounded-2xl border border-white/5">
+      <div className="flex items-center gap-3 mb-6">
+        <Shield className="w-5 h-5 text-emerald-500" />
+        <h2 className="text-xl font-medium text-white tracking-tight">Edit Specimen <span className="text-white/20 ml-2 text-sm">#{specimen.id.slice(0, 8)}</span></h2>
+      </div>
+
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-xs font-bold text-red-400 flex items-center gap-3">
+          <Info className="w-4 h-4" />
           {error}
         </div>
       )}
 
-      <div>
-        <label htmlFor="edit-nickname" className="block text-sm font-medium text-slate-700">
-          Nickname <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          id="edit-nickname"
-          value={nickname}
-          onChange={(e) => setNickname(e.target.value)}
-          className="mt-1.5 block w-full rounded-lg border border-slate-300 px-4 py-2.5 text-slate-900 shadow-sm transition-colors focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
-          disabled={isPending}
-        />
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="nickname" className="block text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-2">Nickname Target</label>
+          <input
+            id="nickname"
+            type="text"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            placeholder="e.g. Venus Trappist"
+            className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-all"
+            disabled={isPending}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="species" className="block text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-2">Species Registry</label>
+          <input
+            id="species"
+            type="text"
+            value={speciesName}
+            onChange={(e) => setSpeciesName(e.target.value)}
+            placeholder="e.g. Dionaea muscipula"
+            className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-all"
+            disabled={isPending}
+          />
+        </div>
       </div>
 
-      <div>
-        <label htmlFor="edit-species" className="block text-sm font-medium text-slate-700">
-          Species Name <span className="font-normal text-slate-500">(optional)</span>
-        </label>
-        <input
-          type="text"
-          id="edit-species"
-          value={speciesName}
-          onChange={(e) => setSpeciesName(e.target.value)}
-          className="mt-1.5 block w-full rounded-lg border border-slate-300 px-4 py-2.5 text-slate-900 shadow-sm transition-colors focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
-          disabled={isPending}
-        />
-      </div>
-
-      <div>
-        <label htmlFor="edit-notes" className="block text-sm font-medium text-slate-700">
-          Notes <span className="font-normal text-slate-500">(optional)</span>
-        </label>
-        <textarea
-          id="edit-notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-          className="mt-1.5 block w-full resize-none rounded-lg border border-slate-300 px-4 py-2.5 text-slate-900 shadow-sm transition-colors focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
-          disabled={isPending}
-        />
-      </div>
-
-      <div className="flex items-center gap-3 pt-1">
+      <div className="flex items-center gap-3 pt-6">
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-60"
+          className="flex-1 bg-white text-black py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all disabled:opacity-20 flex items-center justify-center gap-2"
         >
-          {isPending ? "Saving..." : "Save Changes"}
+          {isPending ? <Zap className="w-3 h-3 animate-spin" /> : null}
+          {isPending ? "Updating Registry..." : "Commit Changes"}
         </button>
         <button
           type="button"
           onClick={onCancel}
           disabled={isPending}
-          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-60"
+          className="px-6 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 transition-all"
         >
-          Cancel
+          Abort
         </button>
       </div>
     </form>

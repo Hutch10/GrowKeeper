@@ -52,7 +52,7 @@ export default async function Home() {
                 Add New Specimen
               </h2>
               <div className="rounded-xl border border-brand-pink/30 bg-white p-6 shadow-sm">
-                <AddSpecimenForm />
+                <AddSpecimenForm isOpen={undefined} onClose={undefined} />
               </div>
             </section>
 

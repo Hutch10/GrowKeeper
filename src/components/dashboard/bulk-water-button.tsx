@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 interface Task {
   id: string;
-  plant_id: string;
+  specimen_id: string;
   task_type: string;
 }
 
@@ -33,14 +33,13 @@ export function BulkWaterButton({ tasksToWater }: BulkWaterButtonProps) {
       for (const task of tasksToWater) {
         try {
           // Log the care event
-          const eventResult = await addSpecimenEvent({
-            specimen_id: task.plant_id,
+          const eventResult = await addSpecimenEvent(task.specimen_id, {
             event_type: "watered",
           });
 
           if (eventResult.success) {
             // Mark the task complete
-            await markTaskComplete(task.id, task.plant_id);
+            await markTaskComplete(task.id, task.specimen_id);
             successCount++;
           } else {
             errorCount++;

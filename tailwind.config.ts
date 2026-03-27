@@ -14,20 +14,20 @@ const config: Config = {
         foreground: "var(--foreground)",
         brand: {
           green: {
-            DEFAULT: "#2D5A27",
-            light: "#4A8A3F",
-            dark: "#1A3617",
-            sage: "#84A59D",
-            forest: "#1B3A1C",
+            DEFAULT: "#10B981", // Vibrant Emerald
+            light: "#34D399",
+            dark: "#065F46",
+            sage: "#A7F3D0",
+            forest: "#064E3B",
           },
           pink: {
-            DEFAULT: "#FADADD",
-            light: "#FFF0F1",
-            dark: "#E8B9BD",
-            soft: "#F9EBEC",
+            DEFAULT: "#EC4899", // Vibrant Magenta/Pink
+            light: "#F9A8D4",
+            dark: "#9D174D",
+            soft: "#FDF2F8",
           },
-          dark: "#1A1F1A",
-          warm: "#FFF9F9",
+          dark: "#0F172A", // Softer slate dark
+          warm: "#FDF2F8", // Pinkish white for light mode hints
           cream: "#F9F7F5",
           clay: "#9B7653",
         },

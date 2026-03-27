@@ -99,7 +99,7 @@ export class ReconciliationService {
    * If local node is behind, it submits 'Correction Intents' to the L2 sequencer.
    */
   async resolveNonceGap(local: Specimen, remote: Specimen): Promise<Specimen> {
-    const gap = remote.nonce - (local.nonce || 0);
+    const gap = (remote.nonce || 0) - (local.nonce || 0);
     
     if (gap > 1) {
       logger.warn('Sync', `NONCE GAP DETECTED on ${local.id}: ${gap} missing transitions. Initiating Intent-Bridge...`);

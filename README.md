@@ -1,79 +1,40 @@
-# GrowKeeper
+# GrowKeeper Autonomous Ecosystem
 
-GrowKeeper is a plant care management SaaS for tracking plants, logging care events, and sending reminders.
+The self-sovereign, local-first biological asset management platform.
 
-This project uses:
+## 🚀 Getting Started
 
-- Next.js 14 (App Router)
-- TypeScript
-- Tailwind CSS
-- ESLint
-- Supabase (database and authentication)
-
-## Setup
-
-1. **Install dependencies:**
-
+### Installation
 ```bash
 npm install
 ```
 
-1. **Configure Supabase:**
-
-Copy `.env.example` to `.env.local` and add your Supabase credentials:
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-```
-
-Get these values from your [Supabase project settings](https://app.supabase.com).
-
-1. **Run the development server:**
-
+### Development
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-## Scripts
-
-- `npm run dev` - start local development server
-- `npm run build` - create production build
-- `npm run start` - run production server
-- `npm run lint` - run ESLint
-
-## Initial Project Structure
-
-```text
-src/
-  app/
-    dashboard/
-      page.tsx
-    globals.css
-    layout.tsx
-    page.tsx
-  components/
-    layout/
-      page-shell.tsx
-    ui/
-  config/
-    site.ts
-  features/
-    plants/
-    care-events/
-    reminders/
-  hooks/
-  lib/
-    date.ts
-  types/
-    plant.ts
+### Production Build
+```bash
+npm run build
 ```
 
-## Next Steps
+### Testing
+```bash
+npm run test
+```
 
-- Add authentication and user accounts.
-- Add database models for plants, care events, and reminders.
-- Build CRUD flows for plant profiles and care logs.
-- Add scheduled reminder delivery.
+## 🛡️ Core Technologies
+- **Frontend**: Next.js 14 (App Router)
+- **Local Sovereignty**: PouchDB / IndexedDB
+- **Coordination**: Yjs CRDTs
+- **Animations**: Framer Motion ("Glow-Mesh" Biological Aesthetic)
+- **Verification**: Vitest
+
+## 🧬 Architectural Principles
+1. **Local-First Sovereignty**: The user owns the data; cloud sync is a secondary resilience layer.
+2. **Explainable Prophecy**: Health forecasting is based on deterministic biological math.
+3. **Auditability**: All actions are recorded in a Merkle-chained operational feed.
+
+---
+© 2026 GrowKeeper Protocol. No central authority.

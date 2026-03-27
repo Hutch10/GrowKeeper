@@ -31,24 +31,25 @@ export class RiskService {
    * Performs an automated 'Health Crash' prediction.
    */
   async assessRisk(specimen: Specimen): Promise<RiskAnalysis> {
-    const happiness = specimen.happiness_score || 0;
+    const healthScore = specimen.health || 85;
+    const mortalityRisk = Math.max(0, 100 - healthScore) / 100;
     
     let riskLevel: RiskLevel = 'LOW';
     let healthOutlook: 'EXCELLENT' | 'STABLE' | 'DEGRADING' | 'CRITICAL' = 'EXCELLENT';
     let threat: string | null = null;
     let recommendation = 'Continue existing care protocol.';
 
-    if (happiness < 30) {
+    if (healthScore < 30) {
       riskLevel = 'CRITICAL';
       healthOutlook = 'CRITICAL';
       threat = 'Sustained Vital Failure';
       recommendation = 'IMMEDIATE INTERVENTION REQUIRED: Check moisture and substrate pH.';
-    } else if (happiness < 60) {
+    } else if (healthScore < 60) {
       riskLevel = 'HIGH';
       healthOutlook = 'DEGRADING';
       threat = 'Environmental Drift';
       recommendation = 'Calibrate sensor array and adjust humidity levels.';
-    } else if (happiness < 85) {
+    } else if (healthScore < 85) {
       riskLevel = 'LOW';
       healthOutlook = 'STABLE';
       recommendation = 'Growth trajectory is nominal. Maintain current regimen.';
@@ -56,14 +57,14 @@ export class RiskService {
 
     if (riskLevel === 'CRITICAL' || riskLevel === 'HIGH') {
       metrics.track('high_risk_asset_detected', 1, { specimenId: specimen.id });
-      logger.warn('Risk', `PREDICTIVE ALERT: High failure probability for ${specimen.id}`);
+      logger.warn('Risk', `PREDICTIVE ALERT: High failure probability for ${specimen.id} (${(mortalityRisk * 100).toFixed(1)}% mortality risk)`);
     }
 
     return {
       riskLevel,
       healthOutlook,
       primaryThreat: threat,
-      probability: (100 - happiness) / 100,
+      probability: mortalityRisk,
       recommendation
     };
   }

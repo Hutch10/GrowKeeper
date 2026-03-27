@@ -11,7 +11,7 @@ import {
   ArrowUpRight
 } from "lucide-react";
 import type { SpecimenRow } from "@/app/actions/types";
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
 import { valuationEngine } from '@/lib/services/valuation-engine';
 import { forecasting } from '@/lib/services/forecasting-engine';
 
@@ -20,31 +20,60 @@ interface InvestorViewProps {
   specimens: SpecimenRow[];
 }
 
+interface MetricsData {
+  totalAssets: number;
+  portfolioValue: number;
+  roa: string;
+  marketLiquidity: string;
+  averageEfficiency: number;
+  projectedROA: string;
+}
+
 export function InvestorView({ specimens }: InvestorViewProps) {
-  // Real Financial Metrics calculated from Specimen Collection
-  const metricsData = useMemo(() => {
-    const totalAssets = specimens.length;
-    const portfolioValue = specimens.reduce((sum, s) => sum + valuationEngine.calculateValuation(s).totalValuation, 0);
-    const averageEfficiency = specimens.length > 0
-      ? specimens.reduce((sum, s) => sum + forecasting.calculateEfficiency(s), 0) / specimens.length
-      : 0;
+  const [metricsData, setMetricsData] = useState<MetricsData | null>(null);
 
-    const projectedROA = (averageEfficiency * 15).toFixed(1); // Simulated 15% alpha scaling
-    const projectedValue = specimens.reduce((sum, s) => {
-      return sum + valuationEngine.projectAppreciation(s, 12);
-    }, 0);
+  useEffect(() => {
+    const calculateMetrics = async () => {
+      const totalAssets = specimens.length;
+      let portfolioValue = 0;
+      let projectedValue = 0;
+      let totalEfficiency = 0;
 
-    const roa = portfolioValue > 0 ? ((projectedValue - portfolioValue) / portfolioValue) * 100 : 0;
+      for (const s of specimens) {
+        const metrics = await valuationEngine.calculateValuation(s);
+        portfolioValue += metrics.totalValuation;
+        
+        const projectedVal = await valuationEngine.projectAppreciation(s, 12);
+        projectedValue += projectedVal;
+        
+        totalEfficiency += forecasting.calculateEfficiency(s);
+      }
 
-    return {
-      totalAssets,
-      portfolioValue,
-      roa: roa.toFixed(1),
-      marketLiquidity: (portfolioValue * 0.8).toLocaleString() + " GC",
-      averageEfficiency,
-      projectedROA
+      const averageEfficiency = specimens.length > 0 ? totalEfficiency / specimens.length : 0;
+      const projectedROA = (averageEfficiency * 15).toFixed(1);
+      const roa = portfolioValue > 0 ? ((projectedValue - portfolioValue) / portfolioValue) * 100 : 0;
+
+      setMetricsData({
+        totalAssets,
+        portfolioValue,
+        roa: roa.toFixed(1),
+        marketLiquidity: (portfolioValue * 0.8).toLocaleString() + " GC",
+        averageEfficiency,
+        projectedROA
+      });
     };
+    calculateMetrics();
   }, [specimens]);
+
+  if (!metricsData) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="bg-white h-32 rounded-[2.5rem] border border-slate-100" />
+        ))}
+      </div>
+    );
+  }
 
   const { portfolioValue, roa, marketLiquidity, averageEfficiency, projectedROA } = metricsData;
 

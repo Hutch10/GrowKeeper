@@ -29,8 +29,8 @@ export class ZKAttestationService {
     // Simulation: ZK-circuit computation (using snarkjs/circom logic)
     return new Promise((resolve) => {
       setTimeout(() => {
-        const isHealthy = (specimen.happiness_score || 0) > 70;
-        const isCompliant = specimen.complianceStatus === 'CERTIFIED';
+        const isHealthy = (specimen.health || 0) > 70;
+        const isCompliant = specimen.compliance_status !== 'none';
         
         resolve({
           proofId: generateSecureId('ZK_P'),

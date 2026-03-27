@@ -31,8 +31,7 @@ export function AddCareEventForm({ specimenId }: AddCareEventFormProps) {
     const event_type = formData.get("event_type") as CareEventType;
     const notes = formData.get("notes") as string;
 
-    const result = await addSpecimenEvent({
-      specimen_id: specimenId,
+    const result = await addSpecimenEvent(specimenId, {
       event_type,
       notes: notes || undefined,
     });

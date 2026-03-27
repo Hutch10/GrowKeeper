@@ -14,11 +14,11 @@ export default async function AnalyticsPage() {
   const thirtyDaysAgo = subDays(new Date(), 30);
 
   // Fetch analytics data
-  const [plantsResult, careEventsResult, tasksResult] = await Promise.all([
-    supabase.from('plants').select('id, nickname, created_at').eq('user_id', user.id),
+  const [specimensResult, specimenEventsResult, tasksResult] = await Promise.all([
+    supabase.from('specimens').select('id, nickname, created_at').eq('user_id', user.id),
     supabase
-      .from('plant_events')
-      .select('id, event_type, created_at, plant_id')
+      .from('specimen_events')
+      .select('id, event_type, created_at, specimen_id')
       .eq('user_id', user.id)
       .gte('created_at', thirtyDaysAgo.toISOString()),
     supabase
@@ -28,8 +28,8 @@ export default async function AnalyticsPage() {
       .gte('created_at', thirtyDaysAgo.toISOString()),
   ]);
 
-  const plants = plantsResult.data || [];
-  const careEvents = careEventsResult.data || [];
+  const specimens = specimensResult.data || [];
+  const specimenEvents = specimenEventsResult.data || [];
   const tasks = tasksResult.data || [];
 
   // Calculate care events by day
@@ -40,7 +40,7 @@ export default async function AnalyticsPage() {
 
   const careByDay = last7Days.map(day => {
     const dayStr = format(day, 'yyyy-MM-dd');
-    const count = careEvents.filter(e => 
+    const count = specimenEvents.filter(e => 
       format(new Date(e.created_at), 'yyyy-MM-dd') === dayStr
     ).length;
     return {
@@ -51,7 +51,7 @@ export default async function AnalyticsPage() {
   });
 
   // Care events by type
-  const careByType = careEvents.reduce((acc: Record<string, number>, event) => {
+  const careByType = specimenEvents.reduce((acc: Record<string, number>, event) => {
     const type = event.event_type;
     acc[type] = (acc[type] || 0) + 1;
     return acc;
@@ -68,30 +68,30 @@ export default async function AnalyticsPage() {
     ? Math.round((completedTasks / tasks.length) * 100) 
     : 0;
 
-  // Plants added over time
-  const plantsByMonth = plants.reduce((acc, plant) => {
-    const month = format(new Date(plant.created_at), 'MMM yyyy');
+  // Specimens added over time
+  const specimensByMonth = specimens.reduce((acc, specimen) => {
+    const month = format(new Date(specimen.created_at), 'MMM yyyy');
     acc[month] = (acc[month] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
   const analyticsData = {
     summary: {
-      totalPlants: plants.length,
-      totalCareEvents: careEvents.length,
+      totalPlants: specimens.length,
+      totalCareEvents: specimenEvents.length,
       totalTasks: tasks.length,
       completedTasks,
       taskCompletionRate,
     },
     careByDay,
     careByType: careTypeData,
-    plantsByMonth: Object.entries(plantsByMonth).map(([month, count]) => ({ month, count })),
+    plantsByMonth: Object.entries(specimensByMonth).map(([month, count]) => ({ month, count })),
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
-        Analytics Dashboard
+        Sovereign Registry Analytics
       </h1>
       <AnalyticsDashboard data={analyticsData} />
     </div>

@@ -1,21 +1,22 @@
 /**
- * AI Plant Diagnosis Service
- * Uses OpenAI Vision API to analyze plant photos and detect issues
+ * AI Specimen Diagnosis Service
+ * Uses OpenAI Vision API to analyze specimen photos and detect issues across Kingdoms.
  */
 
 import OpenAI from "openai";
 import { logger } from '../observability/logger';
 import { metrics } from '../observability/metrics';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = process.env.OPENAI_API_KEY 
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 export interface DiagnosisResult {
   overallHealth: "healthy" | "mild_issues" | "moderate_issues" | "severe_issues";
   healthScore: number; // 0-100
+  kingdom: string;
   issues: Array<{
-    type: "disease" | "pest" | "nutrient_deficiency" | "environmental" | "watering";
+    type: "disease" | "pest" | "nutrient_deficiency" | "environmental" | "watering" | "pathogen" | "metabolic";
     name: string;
     severity: "low" | "medium" | "high";
     description: string;
@@ -25,26 +26,33 @@ export interface DiagnosisResult {
   identifiedSpecies?: string;
 }
 
-const DIAGNOSIS_PROMPT = `You are an expert botanist and plant pathologist. Analyze this plant image and provide a detailed health assessment.
+const DIAGNOSIS_PROMPT = `You are an expert biological pathologist and taxonomist specializing in the Sovereign Registry. 
+Analyze this specimen image and provide a detailed health and taxonomic assessment.
 
 Respond in JSON format with the following structure:
 {
   "overallHealth": "healthy" | "mild_issues" | "moderate_issues" | "severe_issues",
   "healthScore": <number 0-100>,
+  "kingdom": "<Plantae | Fungi | Animalia>",
   "issues": [
     {
-      "type": "disease" | "pest" | "nutrient_deficiency" | "environmental" | "watering",
+      "type": "disease" | "pest" | "nutrient_deficiency" | "environmental" | "watering" | "pathogen" | "metabolic",
       "name": "<specific issue name>",
       "severity": "low" | "medium" | "high",
-      "description": "<what you observe>",
-      "treatment": "<recommended treatment>"
+      "description": "<contextual observation>",
+      "treatment": "<remediation protocol>"
     }
   ],
   "careRecommendations": ["<recommendation 1>", "<recommendation 2>", ...],
-  "identifiedSpecies": "<plant species if identifiable, or null>"
+  "identifiedSpecies": "<species name if identifiable, or null>"
 }
 
-Be specific and actionable in your recommendations. If the plant looks healthy, still provide preventive care tips.`;
+CONSTITUTIONAL REQUIREMENTS:
+1. For FUNGI: Focus on mycelial density, substrate moisture, and mold contamination.
+2. For PLANTAE: Focus on stomatal aperture, chlorophyll density, and turgor pressure.
+3. For ANIMALIA: Focus on metabolic activity traces and surface integrity.
+
+Be actionable. If the specimen is GOVERNED (healthy), provide optimization tips for yield enhancement.`;
 
 // Tier 2 Cache: Simple in-memory hash store
 const diagnosisCache = new Map<string, string>();
@@ -59,7 +67,11 @@ async function getImageHash(imageContent: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function diagnoseSpecimen(imageData: string, context?: string): Promise<string> {
+/**
+ * Primary entry point for specimen diagnosis.
+ * Uses a tiered approach: Edge (Mock) -> Cache -> Cloud (OpenAI).
+ */
+export async function diagnoseSpecimen(imageData: string, context?: string): Promise<DiagnosisResult> {
   const startTime = Date.now();
   
   // Tier 1: Edge Check (Placeholder for local TF.js heuristics)
@@ -70,46 +82,24 @@ export async function diagnoseSpecimen(imageData: string, context?: string): Pro
   if (diagnosisCache.has(imageHash)) {
     logger.info('AIDiagnosis', 'Tier 2 Cache Hit: Reusing prior diagnostic result.');
     metrics.trackAILatency(Date.now() - startTime, 'cache');
-    return diagnosisCache.get(imageHash)!;
+    try {
+      return JSON.parse(diagnosisCache.get(imageHash)!) as DiagnosisResult;
+    } catch (e) {
+      logger.error('AIDiagnosis', 'Cache parse failure, falling back to cloud.', e as Error);
+    }
   }
 
   // Tier 3: Cloud AI (OpenAI)
-  logger.info('AIDiagnosis', 'Tier 2 Cache Miss: Initiating Tier 3 Cloud Analysis.');
+  logger.info('AIDiagnosis', 'Tier 2 Cache Miss/Fail: Initiating Tier 3 Cloud Analysis.');
   
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4-vision-preview",
-        messages: [
-          {
-            role: "system",
-            content: "You are a professional botanical pathologist. Analyze the image and provide a health diagnosis."
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: `Analyze this specimen. ${context || ""}` },
-              { type: "image_url", image_url: { url: imageData } }
-            ]
-          }
-        ],
-        max_tokens: 500,
-      }),
-    });
-
-    const result = await response.json();
-    const diagnosis = result.choices[0].message.content;
+    const result = await diagnoseCloudSpecimen(imageData, context);
 
     // Persist to Tier 2 Cache
-    diagnosisCache.set(imageHash, diagnosis);
+    diagnosisCache.set(imageHash, JSON.stringify(result));
     
     metrics.trackAILatency(Date.now() - startTime, 'cloud');
-    return diagnosis;
+    return result;
   } catch (err) {
     logger.error('AIDiagnosis', 'Tier 3 Cloud Analysis failed.', err as Error);
     metrics.trackAILatency(-1, 'cloud');
@@ -118,9 +108,23 @@ export async function diagnoseSpecimen(imageData: string, context?: string): Pro
 }
 
 /**
- * Analyze a plant image and return diagnosis
+ * Tier 3: Cloud-based Multi-Kingdom Diagnostic Implementation
  */
-export async function diagnosePlant(imageUrl: string): Promise<DiagnosisResult> {
+export async function diagnoseCloudSpecimen(imageUrl: string, context?: string): Promise<DiagnosisResult> {
+  if (!openai) {
+    logger.warn('AIDiagnosis', 'OpenAI client not initialized (missing API key). Returning fallback.');
+    return {
+      overallHealth: "healthy",
+      healthScore: 75,
+      kingdom: "Plantae",
+      issues: [],
+      careRecommendations: [
+        "Cloud Analysis unavailable. OpenAI API key not configured.",
+        "Please set OPENAI_API_KEY in .env.local for full diagnostic capabilities.",
+      ],
+    };
+  }
+
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -128,7 +132,7 @@ export async function diagnosePlant(imageUrl: string): Promise<DiagnosisResult> 
         {
           role: "user",
           content: [
-            { type: "text", text: DIAGNOSIS_PROMPT },
+            { type: "text", text: `${DIAGNOSIS_PROMPT}\n\nContext: ${context || "None provided"}` },
             {
               type: "image_url",
               image_url: {
@@ -151,31 +155,32 @@ export async function diagnosePlant(imageUrl: string): Promise<DiagnosisResult> 
     const result = JSON.parse(content) as DiagnosisResult;
     return result;
   } catch (error) {
-    console.error("Error diagnosing plant:", error);
+    console.error("Error in Cloud Diagnosis:", error);
     
-    // Return a fallback response
+    // Return a protocol-compliant fallback
     return {
       overallHealth: "healthy",
       healthScore: 75,
+      kingdom: "Plantae",
       issues: [],
       careRecommendations: [
-        "Unable to analyze image. Please ensure good lighting and a clear view of the plant.",
-        "Try taking a photo in natural daylight for best results.",
+        "Cloud Analysis unavailable. Please ensure hardware link is active.",
+        "Verify network integrity for Tier 3 diagnostic uplink.",
       ],
     };
   }
 }
 
 /**
- * Analyze plant image from base64 data
+ * Analyze specimen image from base64 data
  */
-export async function diagnosePlantFromBase64(base64Image: string): Promise<DiagnosisResult> {
+export async function diagnoseSpecimenFromBase64(base64Image: string): Promise<DiagnosisResult> {
   // Ensure proper data URL format
   const imageUrl = base64Image.startsWith("data:") 
     ? base64Image 
     : `data:image/jpeg;base64,${base64Image}`;
   
-  return diagnosePlant(imageUrl);
+  return diagnoseSpecimen(imageUrl);
 }
 
 /**

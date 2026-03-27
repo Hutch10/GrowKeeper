@@ -13,12 +13,13 @@ class MarketplaceService {
    * Requires a verified provenance chain.
    */
   async listSpecimen(specimen: Specimen, price: number): Promise<Listing> {
-    // 1. Check provenance & health status
-    if (specimen.health_status === 'critical') {
-      throw new Error("Cannot list specimens in critical health. Provenance validation failed.");
+    // Quality Control: We only list healthy specimens
+    if ((specimen.health || 0) < 60) {
+      logger.error('Marketplace', `LISTING REJECTED: Specimen ${specimen.id} health too low (${specimen.health}%).`);
+      throw new Error('Asset health insufficient for secondary market');
     }
 
-    if (!specimen.lastVitalSignature) {
+    if (!specimen.last_vital_signature) {
       logger.warn('Marketplace', `Listing ${specimen.id} without verified Proof-of-Care.`);
     }
 
@@ -52,7 +53,7 @@ class MarketplaceService {
 
     // 2. Lock L2 Escrow with Provenance Signature
     // In a prod environment, the escrow would hold funds until BOTH nodes sign the handover token.
-    logger.info('Marketplace', `Escrow locked with Proof-of-Care token: ${specimen.lastVitalSignature || 'UNSIGNED'}`);
+    logger.info('Marketplace', `Escrow locked with Proof-of-Care token: ${specimen.last_vital_signature || 'UNSIGNED'}`);
 
     // 3. Update listing status
     await this.updateListingStatus(listingId, "escrow");

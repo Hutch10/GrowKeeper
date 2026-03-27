@@ -66,18 +66,18 @@ export class StewardshipService {
     }
     
     // 1. Validate latest Proof-of-Care signature
-    if (specimen.lastVitalSignature && specimen.public_key) {
+    if (specimen.last_vital_signature && specimen.public_key) {
       const publicJwk = JSON.parse(specimen.public_key);
       const isValid = await provenance.verifyVitals(
         { specimenId: specimen.id, timestamp: specimen.created_at || new Date().toISOString() }, 
-        specimen.lastVitalSignature,
+        specimen.last_vital_signature,
         publicJwk
       );
       if (!isValid) {
         logger.critical('Stewardship', `CAUTION: PROVENANCE FORGERY DETECTED logic triggered on ${specimen.id}`);
         throw new Error('Asset integrity validation failed. Asymmetric signature mismatch.');
       }
-    } else if (specimen.lastVitalSignature && !specimen.public_key) {
+    } else if (specimen.last_vital_signature && !specimen.public_key) {
       logger.error('Stewardship', `Integrity Error: Signature exists but public key is missing for ${specimen.id}`);
       throw new Error('Missing public key for provenance verification.');
     }

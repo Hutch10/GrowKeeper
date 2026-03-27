@@ -23,7 +23,8 @@ export class RWAVaultService {
    * Vaults a specimen and slices it into fractional shares.
    */
   async vaultSpecimen(specimen: Specimen): Promise<FractionalVault> {
-    const valuation = valuationEngine.calculateValuation(specimen).totalValuation;
+    const metrics = await valuationEngine.calculateValuation(specimen);
+    const valuation = metrics.totalValuation;
     const sharePrice = valuation / this.DEFAULT_SHARES;
 
     const vault: FractionalVault = {

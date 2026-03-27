@@ -29,7 +29,7 @@ export class SupplyChainService {
     logger.info('Logistics', `Initiating Supply Chain Manifest for ${specimen.id} via carrier ${carrierId}`);
 
     // Verify compliance before allowing transit
-    const isCompliant = specimen.complianceStatus === 'CERTIFIED';
+    const isCompliant = specimen.compliance_status === 'CERTIFIED';
     if (!isCompliant) {
       logger.error('Logistics', `REJECTED: ${specimen.id} is not compliant for transit.`);
       return null;

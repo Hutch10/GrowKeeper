@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { markTaskComplete } from "@/app/actions/tasks";
+import { useSyncMutation } from "@/hooks/use-mutation";
 import { formatDate } from "@/lib/date";
+import { CheckCircle2 } from "lucide-react";
 import type { DashboardUpcomingTask } from "@/app/actions/dashboard";
 
 interface UpcomingTasksListProps {
@@ -58,40 +60,41 @@ const urgencyLabels: Record<TaskUrgency, string> = {
 
 export function UpcomingTasksList({ tasks }: UpcomingTasksListProps) {
   const router = useRouter();
-  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
-  const [completionError, setCompletionError] = useState<string | null>(null);
+  const { mutate: completeTask, isPending: isCompleting } = useSyncMutation(
+    (args: { taskId: string; specimenId: string }) => markTaskComplete(args.taskId, args.specimenId)
+  );
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
   if (tasks.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-        No upcoming tasks
+      <div className="rounded-[2rem] border-2 border-dashed border-brand-pink/20 bg-white p-12 text-center group transition-all hover:border-brand-pink/40">
+        <div className="w-16 h-16 bg-brand-pink/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+          <CheckCircle2 className="w-8 h-8 text-brand-pink" />
+        </div>
+        <h3 className="text-xl font-black text-brand-dark mb-2">Operational Calm</h3>
+        <p className="text-sm text-brand-dark/40 font-bold mb-6">No pending care actions detected in your registry.</p>
+        <Link 
+          href="/plants" 
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-forest text-white text-sm font-black hover:bg-brand-forest/90 transition-all shadow-lg active:scale-95"
+        >
+          View Specimens to Assign Tasks
+        </Link>
       </div>
     );
   }
 
   async function handleMarkComplete(taskId: string, plantId: string) {
-    setCompletionError(null);
-    setCompletingTaskId(taskId);
+    setActiveTaskId(taskId);
+    const result = await completeTask({ taskId, specimenId: plantId });
+    setActiveTaskId(null);
 
-    const result = await markTaskComplete(taskId, plantId);
-
-    setCompletingTaskId(null);
-
-    if (!result.success) {
-      setCompletionError(`completion failure: ${result.error}`);
-      return;
+    if (result.success) {
+      router.refresh();
     }
-
-    router.refresh();
   }
 
   return (
     <div className="space-y-3">
-      {completionError ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {completionError}
-        </div>
-      ) : null}
 
       {tasks.map((task) => {
         const urgency = getTaskUrgency(task.due_date);
@@ -140,10 +143,10 @@ export function UpcomingTasksList({ tasks }: UpcomingTasksListProps) {
                   <button
                     type="button"
                     onClick={() => handleMarkComplete(task.id, task.specimen_id)}
-                    disabled={completingTaskId !== null}
+                    disabled={isCompleting}
                     className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {completingTaskId === task.id ? "Saving..." : "Mark complete"}
+                    {isCompleting && activeTaskId === task.id ? "Saving..." : "Mark complete"}
                   </button>
                 ) : null}
               </div>

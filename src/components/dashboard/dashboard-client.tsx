@@ -18,7 +18,6 @@ import { SovereignSettlement } from "@/components/dashboard/sovereign-settlement
 import type { WeatherData } from "@/app/actions/weather";
 import { useSpecimenData } from "@/hooks/use-specimen-data";
 import type { SpecimenRow } from "@/app/actions/types";
-import { marketplace } from "@/lib/services/marketplace";
 
 interface DashboardClientProps {
   initialData: {
@@ -44,21 +43,12 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
   const [isInvestorMode, setIsInvestorMode] = useState(false);
   const [filterKingdom, setFilterKingdom] = useState<string>("All");
 
-  const handleList = async (specimen: SpecimenRow) => {
-    try {
-      // Logic for listing at a fixed tactical price for MVP
-      await marketplace.listSpecimen(specimen as never, 500);
-      alert(`Asset ${specimen.nickname} liquified on L2 Marketplace! Check Exclusive Drops.`);
-    } catch (err) {
-       alert(err instanceof Error ? err.message : "Ranking failed.");
-    }
-  };
 
-  const filteredSpecimens = specimens.filter((p: SpecimenRow) => 
-    filterKingdom === "All" || p.kingdom === filterKingdom
+  const filteredSpecimens = specimens.filter((s: SpecimenRow) => 
+    filterKingdom === "All" || s.kingdom === filterKingdom
   );
 
-  const selectedSpecimen = filteredSpecimens.find((p: SpecimenRow) => p.id === selectedSpecimenId) || filteredSpecimens[0] || specimens[0];
+  const selectedSpecimen = filteredSpecimens.find((s: SpecimenRow) => s.id === selectedSpecimenId) || filteredSpecimens[0] || specimens[0];
 
   return (
     <div className="flex min-h-screen bg-brand-cream font-sans selection:bg-brand-green/10">
@@ -180,7 +170,8 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                   kingdom={specimen.kingdom as "Plantae" | "Fungi" | "Animalia" | "Other"}
                   isActive={selectedSpecimenId === specimen.id}
                   onClick={() => setSelectedSpecimenId(specimen.id)}
-                  onList={() => handleList(specimen)}
+                  compliance_status={specimen.compliance_status}
+                  hardware_attestation_statement={specimen.hardware_attestation_statement}
                 />
               ))}
             </div>

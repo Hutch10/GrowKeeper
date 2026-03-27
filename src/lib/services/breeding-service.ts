@@ -25,8 +25,8 @@ export class BreedingService {
       throw new Error('Missing ZK-Integrity for parents');
     }
 
-    if ((a.happiness_score || 0) < 70 || (b.happiness_score || 0) < 70) {
-      logger.warn('AI-Breeding', 'BREEDING BLOCKED: Parents health/happiness below the 70% UBI threshold.');
+    if ((a.health || 0) < 70 || (b.health || 0) < 70) {
+      logger.warn('AI-Breeding', 'BREEDING BLOCKED: Parents health/vitality below the 70% UBI threshold.');
       throw new Error('Insufficient parent health score');
     }
 

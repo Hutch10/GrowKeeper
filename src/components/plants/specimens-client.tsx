@@ -102,7 +102,7 @@ export function SpecimensClient({ initialSpecimens }: SpecimensClientProps) {
               {locations.map((loc) => (
                 <button 
                   key={loc}
-                  onClick={() => setSelectedLocation(loc)}
+                  onClick={() => setSelectedLocation(loc as string)}
                   className={`px-6 py-4 rounded-2xl font-black whitespace-nowrap transition-all ${selectedLocation === loc ? 'bg-brand-forest text-white shadow-md' : 'bg-white text-brand-dark/40 hover:bg-white/80'}`}
                 >
                   {loc}
@@ -112,24 +112,41 @@ export function SpecimensClient({ initialSpecimens }: SpecimensClientProps) {
           </div>
         </div>
 
+        {/* Empty State Hero */}
+        {initialSpecimens.length === 0 && (
+          <div className="bg-white rounded-[3rem] p-12 text-center mb-8 border-2 border-dashed border-brand-pink/20">
+            <div className="max-w-2xl mx-auto">
+              <div className="w-24 h-24 bg-brand-pink/10 rounded-full flex items-center justify-center mx-auto mb-8">
+                <Plus className="w-12 h-12 text-brand-pink" />
+              </div>
+              <h2 className="text-4xl font-black text-brand-dark mb-4">Your Field Collection is Empty</h2>
+              <p className="text-xl text-brand-dark/50 font-medium mb-10 leading-relaxed">
+                Start your biological asset management journey. Register your first specimen to begin tracking health metrics, hardware provenance, and autonomous regulation cycles.
+              </p>
+              <Link 
+                href="/plants/new"
+                className="inline-flex items-center gap-4 px-10 py-5 rounded-[2rem] bg-brand-forest text-white text-xl font-black hover:bg-brand-forest/90 transition-all shadow-xl shadow-brand-forest/30 active:scale-95"
+              >
+                <Plus className="w-6 h-6" />
+                Add Your First Specimen
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Specimens Grid */}
         {filteredSpecimens.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredSpecimens.map((specimen) => (
               <SpecimenSummaryCard 
                 key={specimen.id}
-                id={specimen.id}
-                nickname={specimen.nickname}
-                species_name={specimen.species_name}
-                isActive={selectedSpecimenId === specimen.id}
+                specimen={specimen}
+                isSelected={selectedSpecimenId === specimen.id}
                 onClick={() => setSelectedSpecimenId(specimen.id)}
-                kingdom={specimen.kingdom}
-                complianceStatus={specimen.complianceStatus}
-                isCertified={!!specimen.lastVitalSignature}
               />
             ))}
           </div>
-        ) : (
+        ) : initialSpecimens.length > 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-24 h-24 bg-brand-soft-pink/30 rounded-full flex items-center justify-center mb-6">
               <Search className="w-10 h-10 text-brand-pink-dark" />
@@ -137,7 +154,7 @@ export function SpecimensClient({ initialSpecimens }: SpecimensClientProps) {
             <h3 className="text-2xl font-black text-brand-dark mb-2">No specimens found</h3>
             <p className="text-brand-dark/40 font-bold max-w-md">Try adjusting your filters or search query to find the specimen you&apos;re looking for.</p>
           </div>
-        )}
+        ) : null}
       </main>
 
       {/* Right Sidebar Inspector */}

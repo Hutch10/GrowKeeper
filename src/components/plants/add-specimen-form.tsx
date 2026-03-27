@@ -6,6 +6,7 @@ import { Camera, Leaf, Droplets, MapPin, Sun, ArrowRight, ArrowLeft, Check, Wave
 import Image from "next/image";
 import { useSpecimenData } from "@/hooks/use-specimen-data";
 import { type AddSpecimenInput } from "@/app/actions/specimen-actions";
+import { useSyncMutation } from "@/hooks/use-mutation";
 
 const STEPS = [
   { id: "kingdom", title: "Kingdom", icon: Leaf },
@@ -27,10 +28,15 @@ const WATERING_OPTIONS = [
   "Daily", "Twice a week", "Weekly", "Every 2 weeks", "Monthly"
 ];
 
-export function AddSpecimenForm() {
+interface AddSpecimenFormProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
   const router = useRouter();
   const { addSpecimen } = useSpecimenData();
-  const [isPending, setIsPending] = useState(false);
+  const { mutate: performAdd, isPending } = useSyncMutation(addSpecimen);
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -54,6 +60,12 @@ export function AddSpecimenForm() {
   const [dietaryNotes, setDietaryNotes] = useState("");
 
   const [location, setLocation] = useState("Living Room");
+
+  // Determine if we are in modal or static mode
+  const isModal = isOpen !== undefined;
+  
+  // If isOpen is explicitly false, don't render
+  if (isOpen === false) return null;
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -88,25 +100,24 @@ export function AddSpecimenForm() {
     }
 
     setError(null);
-    setIsPending(true);
 
     try {
       const specimenData = {
         nickname: nickname.trim(),
-        species_name: speciesName.trim() || null,
-        notes: notes.trim() || null,
+        species_name: speciesName.trim() || undefined,
+        notes: notes.trim() || undefined,
         location,
         kingdom,
         ...(kingdom === "Plantae" ? {
-          light: light || null,
-          watering: watering || null,
+          light: light || undefined,
+          watering: watering || undefined,
         } : kingdom === "Fungi" ? {
-          substrate: substrate || null,
-          misting_schedule: watering || null,
+          substrate: substrate || undefined,
+          misting_schedule: watering || undefined,
         } : kingdom === "Animalia" ? {
-          heart_rate: heartRate === "" ? null : Number(heartRate),
-          activity_level: activityLevel === "" ? null : Number(activityLevel),
-          dietary_notes: dietaryNotes.trim() || null,
+          heart_rate: heartRate === "" ? undefined : Number(heartRate),
+          activity_level: activityLevel === "" ? undefined : Number(activityLevel),
+          dietary_notes: dietaryNotes.trim() || undefined,
         } : {}),
         image: image ? (() => {
           const formData = new FormData();
@@ -115,18 +126,16 @@ export function AddSpecimenForm() {
         })() : undefined,
       };
 
-      const result = await addSpecimen(specimenData as AddSpecimenInput);
+      const result = await performAdd(specimenData as AddSpecimenInput);
 
       if (result.success) {
-        router.push("/plants");
+        onClose?.();
         router.refresh();
       } else {
-        setError((result as { error: string }).error || "Failed to add specimen.");
+        setError(result.error || "Failed to add specimen.");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.");
-    } finally {
-      setIsPending(false);
     }
   };
 
@@ -455,84 +464,106 @@ export function AddSpecimenForm() {
     }
   };
 
-  return (
-    <div className="max-w-3xl mx-auto selection:bg-brand-green/10">
+  const formContent = (
+    <div className={`${isModal ? "max-w-3xl w-full max-h-[90vh] overflow-y-auto selection:bg-brand-green/20 tactical-panel border-white/10 p-8 sm:p-12 relative shadow-2xl" : "w-full p-6"} space-y-12`}>
+      {isModal && (
+        <button 
+          onClick={onClose}
+          className="absolute top-6 right-6 p-2 text-white/20 hover:text-white transition-colors"
+          title="Close"
+        >
+          <Check className="w-6 h-6 rotate-45" />
+        </button>
+      )}
+
       {/* Progress Header */}
-      <div className="mb-16">
-        <div className="flex justify-between relative mb-8">
-          <div className="absolute top-6 left-6 right-6 h-0.5 bg-brand-pink/10" />
-          <div 
-            className="absolute top-6 left-6 h-0.5 bg-brand-green transition-all duration-700 ease-out" 
-            style={{ "--progress-width": `${Math.round((currentStep / (STEPS.length - 1)) * 100)}%` } as React.CSSProperties}
-          />
-          {STEPS.map((step, idx) => {
-            const Icon = step.icon;
-            const isActive = idx === currentStep;
-            const isCompleted = idx < currentStep;
-            
-            return (
-              <div key={step.id} className="relative z-10 flex flex-col items-center gap-3">
-                <div className={`w-12 h-12 rounded-[1.25rem] flex items-center justify-center transition-all duration-500 border-2 ${
-                  isActive 
-                    ? "bg-white border-brand-green text-brand-green shadow-xl shadow-brand-green/20 scale-110" 
-                    : isCompleted 
-                      ? "bg-brand-green border-brand-green text-white" 
-                      : "bg-white border-brand-pink/20 text-brand-pink/40"
-                }`}>
-                  {isCompleted ? <Check className="w-5 h-5 stroke-[3]" /> : <Icon className="w-5 h-5" />}
-                </div>
-                <span className={`text-[8px] font-black uppercase tracking-[0.2em] transition-colors duration-500 ${
-                  isActive ? "text-brand-green" : "text-brand-pink/40"
-                }`}>
-                  {step.title}
-                </span>
+      <div className={`flex justify-between relative mb-8 px-4 ${isModal ? "" : "text-brand-dark"}`}>
+        <div className={`absolute top-6 left-6 right-6 h-[1px] ${isModal ? "bg-white/10" : "bg-brand-dark/10"}`} />
+        <div 
+          className="absolute top-6 left-6 h-[1px] bg-brand-green transition-all duration-700 ease-out" 
+          style={{ width: `${Math.round((currentStep / (STEPS.length - 1)) * 100)}%` }}
+        />
+        {STEPS.map((step, idx) => {
+          const Icon = step.icon;
+          const isActive = idx === currentStep;
+          const isCompleted = idx < currentStep;
+          
+          return (
+            <div key={step.id} className="relative z-10 flex flex-col items-center gap-3">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 border ${
+                isActive 
+                  ? "bg-brand-green text-black scale-110 shadow-[0_0_20px_rgba(52,211,153,0.3)]" 
+                  : isCompleted 
+                    ? "bg-brand-green/20 border-brand-green text-brand-green" 
+                    : isModal ? "bg-white/5 text-white/20 border-white/10" : "bg-brand-dark/5 text-brand-dark/20 border-brand-dark/10"
+              }`}>
+                {isCompleted ? <Check className="w-5 h-5 stroke-[3]" /> : <Icon className="w-5 h-5" />}
               </div>
-            );
-          })}
-        </div>
+              <span className={`text-[8px] font-black uppercase tracking-[0.2em] transition-colors duration-500 ${
+                isActive ? "text-brand-green" : isModal ? "text-white/20" : "text-brand-dark/20"
+              }`}>
+                {step.title}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
-      <div className="bg-brand-cream/40 backdrop-blur-3xl rounded-[4rem] p-10 border border-white shadow-[0_20px_50px_-12px_rgba(0,0,0,0.05)]">
-        {error && (
-          <div className="mb-8 p-5 bg-red-50 border-2 border-red-100 rounded-[2rem] text-red-500 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-3 animate-in zoom-in-95 duration-300">
-             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-             {error}
-          </div>
-        )}
+      {error && (
+        <div className="p-5 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 animate-in zoom-in-95 duration-300">
+           <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+           {error}
+        </div>
+      )}
 
-        {renderStep()}
+      {renderStep()}
 
-        <div className="mt-12 pt-8 border-t border-brand-pink/10 flex items-center justify-between">
+      <div className={`pt-12 border-t flex items-center justify-between ${isModal ? "border-white/5" : "border-brand-dark/5"}`}>
+        <button
+          type="button"
+          onClick={currentStep === 0 ? onClose : handleBack}
+          className={`group flex items-center gap-3 px-8 py-4 rounded-xl font-black transition-all active:scale-95 ${
+            isModal ? "text-white/30 hover:text-white" : "text-brand-dark/30 hover:text-brand-dark"
+          }`}
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          <span className="text-[10px] uppercase tracking-widest">{currentStep === 0 ? "Abort" : "Previous"}</span>
+        </button>
+
+        {currentStep < STEPS.length - 1 ? (
           <button
             type="button"
-            onClick={currentStep === 0 ? () => router.back() : handleBack}
-            className="group flex items-center gap-3 px-8 py-4 rounded-[2rem] font-black text-brand-dark/40 hover:text-brand-dark transition-all active:scale-95"
+            onClick={handleNext}
+            className={`group flex items-center gap-4 px-10 py-4 rounded-xl font-black border transition-all ${
+              isModal 
+                ? "bg-white/10 text-white border-white/10 hover:bg-white/20 hover:scale-105" 
+                : "bg-brand-dark/10 text-brand-dark border-brand-dark/10 hover:bg-brand-dark/20 hover:scale-105"
+            }`}
           >
-            <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-            {currentStep === 0 ? "Cancel" : "Previous"}
+            <span className="text-[10px] uppercase tracking-widest">Next Phase</span>
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </button>
-
-          {currentStep < STEPS.length - 1 ? (
-            <button
-              type="button"
-              onClick={handleNext}
-              className="group flex items-center gap-4 px-10 py-5 bg-brand-dark text-white rounded-[2rem] font-black shadow-2xl hover:bg-brand-green hover:scale-105 active:scale-95 transition-all"
-            >
-              Next Strategy
-              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={isPending}
-              className="flex items-center gap-4 px-12 py-5 bg-brand-green text-white rounded-[4rem] font-black shadow-2xl shadow-brand-green/30 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
-            >
-              {isPending ? "Integrating Lifeform..." : "Welcome Home"}
-              <Check className="w-6 h-6 stroke-[3]" />
-            </button>
-          )}
-        </div>
+        ) : (
+          <button
+            onClick={handleSubmit}
+            disabled={isPending}
+            className="flex items-center gap-4 px-12 py-4 bg-brand-green text-black rounded-xl font-black shadow-2xl shadow-brand-green/20 hover:bg-white hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+          >
+            <span className="text-[10px] uppercase tracking-widest">{isPending ? "Integrating Lifeform..." : "Commence Governance"}</span>
+            <Check className="w-5 h-5 stroke-[3]" />
+          </button>
+        )}
       </div>
     </div>
   );
+
+  if (isModal) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-xl animate-in fade-in duration-300">
+        {formContent}
+      </div>
+    );
+  }
+
+  return formContent;
 }

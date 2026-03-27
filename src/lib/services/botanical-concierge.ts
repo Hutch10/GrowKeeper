@@ -40,8 +40,8 @@ class BotanicalConciergeService {
       try {
         const specimen = await specimensDB.get(specimenId) as unknown as SpecimenRow;
         contextStr = `\nContext: User is asking about their specimen "${specimen.nickname}" (${specimen.species_name || "Unknown species"}). 
-        Current moisture: ${specimen.moisture_level}%, Light: ${specimen.light_level} UV, Temp: ${specimen.temp_c}°C. 
-        Current health: ${specimen.health_status}.`;
+        Current moisture: ${Math.round((specimen.telemetry?.moisture || 0) * 100)}%, Light: ${Math.round((specimen.telemetry?.light || 0) * 100)}%, Temp: ${specimen.telemetry?.temperature || 22}°C. 
+        Current health: ${specimen.health}%.`;
       } catch (err) {
         console.warn("[Concierge] Could not fetch specimen context:", err);
       }

@@ -1,100 +1,63 @@
-export type Kingdom = "Plantae" | "Fungi" | "Animalia" | "Other";
+export type Kingdom = 'Plantae' | 'Fungi' | 'Animalia' | 'Other';
+
+export interface SpecimenTelemetry {
+  moisture: number;
+  temperature: number;
+  light: number;
+}
 
 export interface BaseSpecimen {
   id: string;
-  user_id: string | null;
   nickname: string;
-  species_name: string | null;
-  notes: string | null;
-  image_url: string | null;
-  location: string | null;
+  species_name?: string | null;
   kingdom: Kingdom;
-  status?: 'ACTIVE' | 'ARCHIVED' | 'WRAPPED_ON_L2' | 'VAULTED' | 'PENDING_VALIDATION';
-  happiness_score: number | null;
-  health_status: string | null;
+  health: number;
+  telemetry: SpecimenTelemetry;
   created_at: string;
+  image_url?: string | null;
+  notes?: string | null;
+  location?: string | null;
+  compliance_status?: string | null;
+  hardware_attestation_statement?: string | null;
+  last_vital_signature?: string | null;
+  custodian_id?: string | null;
   is_draft?: boolean;
-  lastVitalSignature?: string;
-  complianceStatus?: string;
-  public_key?: string; // JWK string
-  version_vector?: Record<string, number>;
-  nonce: number; // For replay protection & L2 finality
-  hardware_attestation_statement: string | null; // Remote Attestation Artifact
-  zk_proof?: string; // Zero-Knowledge Proof for IP/Location (Phase 41)
-  privacy_level?: 'PUBLIC' | 'PROTECTED' | 'STEALTH';
-  custodian_id?: string; // Institutional Custodian ID (Phase 42)
-  multi_sig_threshold?: number; // Shares required for institutional co-sign
-  insurance_policy_id?: string; // Parametric Insurance Policy (Phase 43)
-  is_insured?: boolean;
-  loan_amount?: number; // Outstanding loan against this specimen (Phase 44)
-  collateral_ratio?: number; // Current LTV
-  genetic_fingerprint?: string; // SHA-256 of synthetic genetic marker (Phase 46)
+  status?: 'ACTIVE' | 'VAULTED' | 'TRANSIT' | 'DRAFT' | 'ARCHIVED' | 'WRAPPED_ON_L2';
+  zk_proof?: string | null;
+  health_status?: string | null;
+  user_id?: string | null;
   offspring_count?: number;
-  target_temp_range?: [number, number]; // [MinC, MaxC]
-  target_humidity_range?: [number, number]; // [Min%, Max%]
-  organization_id?: string;
   last_valuation?: number;
-  fertilizer?: string | null;
-  humidity_level?: number | null;
-  temp_c?: number | null;
-  moisture_level?: number | null;
-  light_level?: number | null;
+  loan_amount?: number;
+  collateral_ratio?: number;
+  target_temp_range?: [number, number];
+  target_humidity_range?: [number, number];
+  is_insured?: boolean;
+  insurance_policy_id?: string | null;
   lat?: number;
   lon?: number;
-  region?: string;
+  region?: string | null;
+  nonce?: number;
+  version_vector?: Record<string, number>;
+  privacy_level?: 'PUBLIC' | 'PRIVATE' | 'STEALTH';
+  public_key?: string | null;
+  updated_at?: string | null;
 }
 
-export interface PlantSpecimen extends BaseSpecimen {
-  kingdom: "Plantae";
-  status: 'ACTIVE' | 'ARCHIVED' | 'WRAPPED_ON_L2' | 'VAULTED' | 'PENDING_VALIDATION';
-  light: string | null;
-  watering: string | null;
-}
-
-export interface FungalSpecimen extends BaseSpecimen {
-  kingdom: "Fungi";
-  status: 'ACTIVE' | 'ARCHIVED' | 'WRAPPED_ON_L2' | 'VAULTED' | 'PENDING_VALIDATION';
-  substrate: string | null;
-  misting_schedule: string | null;
-  fruiting_conditions?: string | null;
-}
-
-export interface AnimaliaSpecimen extends BaseSpecimen {
-  kingdom: "Animalia";
-  status: 'ACTIVE' | 'ARCHIVED' | 'WRAPPED_ON_L2' | 'VAULTED' | 'PENDING_VALIDATION';
-  heart_rate?: number | null;
-  activity_level?: number | null;
-  dietary_notes?: string | null;
-}
-
-export interface OtherSpecimen extends BaseSpecimen {
-  kingdom: "Other";
-  status: 'ACTIVE' | 'ARCHIVED' | 'WRAPPED_ON_L2' | 'VAULTED' | 'PENDING_VALIDATION';
-}
-
-export type Specimen = PlantSpecimen | FungalSpecimen | AnimaliaSpecimen | OtherSpecimen;
-
-export type CareEventType =
-  | "watered"
-  | "fertilized"
-  | "pruned"
-  | "repotted"
-  | "noted";
+export type Specimen = BaseSpecimen;
 
 export interface CareEvent {
   id: string;
-  specimenId: string;
-  type: CareEventType;
-  occurredAt: string;
-  notes?: string;
+  specimen_id: string;
+  event_type: string;
+  timestamp: string;
+  notes?: string | null;
 }
-
-export type ReminderChannel = "email" | "push";
 
 export interface Reminder {
   id: string;
-  specimenId: string;
-  dueAt: string;
-  channel: ReminderChannel;
-  sentAt?: string;
+  specimen_id: string;
+  title: string;
+  due_date: string;
+  completed: boolean;
 }

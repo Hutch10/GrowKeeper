@@ -25,11 +25,19 @@ import {
 
 import { forecasting, ForecastResult } from '@/lib/services/forecasting-engine';
 import { riskService, RiskAnalysis } from '@/lib/services/risk-assessment';
+import { RAIS_CONSTITUTION } from '@/lib/rais-constitution';
 
 import { useState, useEffect } from "react";
 import { SpecimenScanner } from "@/components/plants/specimen-scanner";
 import { LineageView } from "@/components/plants/lineage-view";
-import type { SpecimenRow, PlantSpecimen, FungalSpecimen, AnimaliaSpecimen } from "@/app/actions/types";
+import { FractionalVaultPanel } from "@/components/finance/fractional-vault-panel";
+import { ParametricInsurancePanel } from "@/components/finance/parametric-insurance-panel";
+import { treatmentProtocolService, type TreatmentTask } from "@/lib/services/treatment-protocol-service";
+import { speciesIntelligenceService, type IntelligenceMeshNode, type CareProtocol } from "@/lib/services/species-intelligence";
+import type { SpecimenRow } from "@/app/actions/types";
+import { IntelligenceMeshPanel } from "./intelligence-mesh-panel";
+import { healthForecastService, type HealthForecast } from "@/lib/services/health-forecast-service";
+import { NeuralForecastGraph } from "./neural-forecast-graph";
 
 interface SpecimenDetailPanelProps {
   className?: string;
@@ -43,28 +51,52 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [forecast, setForecast] = useState<ForecastResult | null>(null);
   const [risk, setRisk] = useState<RiskAnalysis | null>(null);
+  const [tasks, setTasks] = useState<TreatmentTask[]>([]);
+  const [isMeshInitialized, setIsMeshInitialized] = useState(false);
+  const [isMeshLoading, setIsMeshLoading] = useState(false);
+  const [meshNodes, setMeshNodes] = useState<IntelligenceMeshNode[]>([]);
+  const [careProtocol, setCareProtocol] = useState<CareProtocol | null>(null);
+  const [healthForecast, setHealthForecast] = useState<HealthForecast | null>(null);
 
   useEffect(() => {
     if (specimen) {
       forecasting.predictMilestone(specimen).then(setForecast);
       riskService.assessRisk(specimen).then(setRisk);
+      treatmentProtocolService.getSpecimenTasks(specimen.id).then(setTasks); 
+      
+      const forecastData = healthForecastService.generateForecast(
+        specimen.id, 
+        specimen.health || 85, 
+        specimen.kingdom || "Plantae",
+        specimen.telemetry || {}
+      );
+      setHealthForecast(forecastData);
+
+      // Reset mesh state when switching specimens
+      setIsMeshInitialized(false);
+      setMeshNodes([]);
+      setCareProtocol(null);
     } else {
       setForecast(null);
       setRisk(null);
+      setTasks([]);
+      setHealthForecast(null);
     }
   }, [specimen]);
 
   if (!specimen) {
     return (
-      <aside className={`w-80 bg-white rounded-[2.5rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col items-center justify-center text-center ${className || ""}`}>
-        <div className="w-20 h-20 bg-brand-pink/20 rounded-full flex items-center justify-center mb-4">
-          <Leaf className="w-10 h-10 text-brand-pink-dark" />
+      <aside className={`w-80 tactical-panel p-8 flex flex-col items-center justify-center text-center ${className || ""}`}>
+        <div className="w-20 h-20 bg-brand-green/10 rounded-full flex items-center justify-center mb-4">
+          <Leaf className="w-10 h-10 text-brand-green" />
         </div>
-        <h2 className="text-xl font-bold text-brand-dark mb-2">Select a Specimen</h2>
-        <p className="text-sm text-brand-dark/40 font-medium">Click on a specimen to see its detailed care guide and reminders.</p>
+        <h2 className="text-xl font-bold text-white mb-2">Select a Specimen</h2>
+        <p className="text-sm text-white/40 font-medium">Capture or select a record to initiate protocol synchronization.</p>
       </aside>
     );
   }
+
+  const raisAudit = RAIS_CONSTITUTION.validateSpecimen(specimen);
 
   const isFungal = specimen.kingdom === "Fungi";
   const isAnimalia = specimen.kingdom === "Animalia";
@@ -75,10 +107,10 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
       : `https://images.unsplash.com/photo-1545239351-ef056c5983f3?q=80&w=400&h=400&auto=format&fit=crop`);
 
   return (
-    <aside className={`w-96 bg-white rounded-[2.5rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-y-auto max-h-[calc(100vh-2rem)] border border-white ${className || ""}`}>
+    <aside className={`w-96 tactical-panel p-6 overflow-y-auto max-h-[calc(100vh-2rem)] border border-white/5 shadow-2xl ${className || ""}`}>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-extrabold text-brand-dark">Specimen Details</h2>
-        <button className="text-brand-dark/20 hover:text-brand-dark transition-colors" title="Close">
+        <h2 className="text-xl font-black text-white uppercase tracking-tighter">Specimen Intelligence</h2>
+        <button className="text-white/20 hover:text-white transition-colors" title="Close">
           <ChevronDown className="w-6 h-6" />
         </button>
       </div>
@@ -95,8 +127,8 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
       <div className="mb-8">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h3 className="text-2xl font-black text-brand-dark mb-1">{specimen.nickname}</h3>
-            <p className="text-brand-dark/40 font-bold">{specimen.species_name || "Unknown Species"}</p>
+            <h3 className="text-2xl font-black text-white mb-1 uppercase tracking-tight leading-none">{specimen.nickname}</h3>
+            <p className="text-white/40 font-black uppercase text-[10px] tracking-widest leading-none mt-1">{specimen.species_name || "Unidentified Record"}</p>
           </div>
           <button 
             onClick={() => setIsScannerOpen(true)}
@@ -133,142 +165,241 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
             </div>
           </div>
         {/* Happiness & Status Indicators */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="flex-1 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-brand-dark/20 uppercase tracking-widest">Happiness</span>
-              <span className="text-xs font-black text-brand-green">{specimen.happiness_score || 85}%</span>
+        <div className="flex items-center gap-2 mb-6 ml-[-4px]">
+          <div className="flex-1 bg-white/5 px-3 py-2 rounded-2xl border border-white/5">
+            <div className="flex items-center justify-between mb-1.5 px-0.5">
+              <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Vital Signs</span>
+              <span className="text-[10px] font-black text-brand-green uppercase tracking-widest">{specimen.health || 85}% Nominal</span>
             </div>
-            <div className="h-1.5 bg-brand-green/10 rounded-full overflow-hidden">
+            <div className="h-1 bg-white/10 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-gradient-to-r from-emerald-400 to-brand-green rounded-full transition-all duration-1000 shadow-[0_0_8px_rgba(52,211,153,0.5)]" 
-                style={{ width: `${specimen.happiness_score || 85}%` }} 
+                className="h-full bg-brand-green rounded-full shadow-[0_0_10px_rgba(52,211,153,0.5)] transition-all duration-1000" 
+                style={{ width: `${specimen.health || 85}%` }} 
               />
             </div>
           </div>
-          <div className="px-4 py-3 bg-brand-pink/10 rounded-2xl border border-brand-pink/20 flex flex-col items-center justify-center min-w-[80px]">
-            <span className="text-[10px] font-black text-brand-pink-dark/40 uppercase tracking-widest mb-1">Status</span>
-            <span className="text-xs font-black text-brand-pink-dark">{specimen.health_status || "Thriving"}</span>
+          <div className="px-3 py-2 bg-brand-green/10 rounded-2xl border border-brand-green/20 flex flex-col items-center justify-center min-w-[70px]">
+            <span className="text-[9px] font-black text-brand-green/50 uppercase tracking-widest mb-0.5">Alert Level</span>
+            <span className="text-[10px] font-black text-brand-green uppercase tracking-tight">{(specimen.health || 0) > 80 ? "NORMAL" : "STRESSED"}</span>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <DetailRow icon={MapPin} label="Location" value={specimen.location || "Living Room"} color="text-emerald-500" bg="bg-emerald-50" />
+        <div className="space-y-2">
+          <DetailRow icon={MapPin} label="Deployment" value={specimen.location || "Central Hub"} color="text-brand-green" bg="bg-brand-green/10" />
           {specimen.kingdom === "Fungi" ? (
             <>
-              <DetailRow icon={Zap} label="Substrate" value={(specimen as FungalSpecimen).substrate || "Sawdust"} color="text-amber-500" bg="bg-amber-50" />
-              <DetailRow icon={Waves} label="Misting" value={(specimen as FungalSpecimen).misting_schedule || "Daily"} color="text-blue-500" bg="bg-blue-50" />
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              <DetailRow icon={Zap} label="Growth Medium" value={String((specimen as any).substrate || "Sawdust")} color="text-blue-400" bg="bg-blue-400/10" />
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              <DetailRow icon={Waves} label="Climate Model" value={String((specimen as any).misting_schedule || "Stable")} color="text-blue-400" bg="bg-blue-400/10" />
             </>
           ) : specimen.kingdom === "Plantae" ? (
             <>
-              <DetailRow icon={Sun} label="Light" value={(specimen as PlantSpecimen).light || "Bright, Indirect"} color="text-amber-500" bg="bg-amber-50" />
-              <DetailRow icon={Droplets} label="Watering" value={(specimen as PlantSpecimen).watering || "Weekly"} color="text-blue-500" bg="bg-blue-50" />
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              <DetailRow icon={Sun} label="Photon Input" value={String((specimen as any).light || "Ambient")} color="text-amber-400" bg="bg-amber-400/10" />
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              <DetailRow icon={Droplets} label="Hydration" value={String((specimen as any).watering || "Automated")} color="text-blue-400" bg="bg-blue-400/10" />
             </>
           ) : specimen.kingdom === "Animalia" ? (
             <>
-              <DetailRow icon={Activity} label="Activity" value={`${(specimen as AnimaliaSpecimen).activity_level || 0}% Target`} color="text-emerald-500" bg="bg-emerald-50" />
-              <DetailRow icon={Beef} label="Diet" value={(specimen as AnimaliaSpecimen).dietary_notes || "Balanced Diet"} color="text-rose-500" bg="bg-rose-50" />
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              <DetailRow icon={Activity} label="Metabolic Act" value={`${(specimen as any).activity_level || 0}%`} color="text-brand-green" bg="bg-brand-green/10" />
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              <DetailRow icon={Beef} label="Nutrient Pack" value={String((specimen as any).dietary_notes || "Standard")} color="text-rose-400" bg="bg-rose-400/10" />
             </>
           ) : null}
-          <DetailRow icon={Zap} label="Nourishment" value={specimen.fertilizer || "As needed"} color="text-orange-500" bg="bg-orange-50" />
         </div>
 
-        {/* Ask Concierge Quick Action */}
-        <button 
-          className="w-full mt-6 py-4 bg-brand-dark/5 hover:bg-brand-green/10 border border-brand-dark/5 hover:border-brand-green/20 rounded-[1.5rem] flex items-center justify-center gap-3 transition-all group"
-          onClick={() => {
-            // Logic to open concierge with this specimen context would go here
-            // For now, we'll just alert that the concierge is ready
-            alert(`Concierge is analyzing ${specimen.nickname}. Ask anything!`);
-          }}
-        >
-          <Bot className="w-5 h-5 text-brand-green group-hover:scale-110 transition-transform" />
-          <span className="text-xs font-black text-brand-dark uppercase tracking-widest">Ask Botanical Concierge</span>
-        </button>
+        {isMeshInitialized && meshNodes.length > 0 && careProtocol ? (
+          <div className="mt-8 border-t border-white/5 pt-8">
+            <IntelligenceMeshPanel nodes={meshNodes} protocol={careProtocol} />
+          </div>
+        ) : (
+          <>
+            {/* Ask Concierge Quick Action */}
+            <button 
+              className="w-full mt-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-[1.5rem] flex items-center justify-center gap-3 transition-all group relative overflow-hidden"
+              onClick={async () => {
+                if (isMeshLoading) return;
+                setIsMeshLoading(true);
+                
+                // Simulate neural synchronization delay
+                await new Promise(r => setTimeout(r, 2000));
+                
+                const nodes = await speciesIntelligenceService.getIntelligenceMesh(specimen);
+                const protocol = await speciesIntelligenceService.getAdaptiveCareProtocol(specimen);
+                
+                setMeshNodes(nodes);
+                setCareProtocol(protocol);
+                setIsMeshInitialized(true);
+                setIsMeshLoading(false);
+              }}
+            >
+              <div className={`flex items-center gap-3 transition-opacity duration-300 ${isMeshLoading ? 'opacity-0' : 'opacity-100'}`}>
+                <Bot className="w-5 h-5 text-brand-green group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-black text-white uppercase tracking-widest">Initialize Intelligence Mesh</span>
+              </div>
+              
+              {isMeshLoading && (
+                <div className="absolute inset-0 flex items-center justify-center gap-2 bg-brand-green/10">
+                  <Activity className="w-4 h-4 text-brand-green animate-spin" />
+                  <span className="text-[9px] font-black text-brand-green uppercase tracking-[0.3em] animate-pulse">Neural Sync...</span>
+                </div>
+              )}
+            </button>
+
+            {/* Institutional Liquidity Layer */}
+            <div className="mt-4">
+              <FractionalVaultPanel specimen={specimen} />
+            </div>
+
+            {/* Parametric Resilience Layer */}
+            <ParametricInsurancePanel specimen={specimen} />
+          </>
+        )}
       </div>
 
       {/* IoT Vitals Section */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h4 className="text-lg font-extrabold text-brand-dark">Live Vitals</h4>
-          <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-100 rounded-full">
-            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter">Connected</span>
+          <h4 className="text-[11px] font-black text-white/40 uppercase tracking-widest">Real-time Telemetry</h4>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-brand-green/10 border border-brand-green/20 rounded-full">
+            <div className="w-1 h-1 bg-brand-green rounded-full animate-pulse" />
+            <span className="text-[8px] font-black text-brand-green uppercase tracking-tighter">Link Active</span>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <VitalCard icon={isAnimalia ? Activity : isFungal ? Waves : Droplets} label={isAnimalia ? "Activity" : isFungal ? "Humidity" : "Soil"} value={isAnimalia ? `${specimen.activity_level || 0}%` : `${specimen.moisture_level || 58}%`} color="text-blue-500" />
-          <VitalCard icon={isAnimalia ? Heart : Sun} label={isAnimalia ? "Heart Rate" : "Light"} value={isAnimalia ? `${specimen.heart_rate || 70} BPM` : `${specimen.light_level || 7} UV`} color="text-amber-500" />
-          <VitalCard icon={Thermometer} label="Temp" value={`${specimen.temp_c || 22}°C`} color="text-brand-pink-dark" />
+          <VitalCard icon={isAnimalia ? Activity : isFungal ? Waves : Droplets} label={isAnimalia ? "Metabolism" : isFungal ? "Osmosis" : "Hydration"} value={isAnimalia ? "Active" : `${Math.round((specimen.telemetry?.moisture || 0.5) * 100)}%`} color="text-blue-400" />
+          <VitalCard icon={isAnimalia ? Heart : Sun} label={isAnimalia ? "Pulse" : "Solar"} value={isAnimalia ? "Norm" : `${Math.round((specimen.telemetry?.light || 0.5) * 10)} UV`} color="text-amber-400" />
+          <VitalCard icon={Thermometer} label="Thermal" value={`${specimen.telemetry?.temperature || 21}°C`} color="text-brand-pink" />
         </div>
       </div>
 
       {/* Smart Home Alerts */}
-      {specimen.moisture_level && specimen.moisture_level < 45 && (
-        <div className="mb-8 p-4 bg-amber-50 rounded-[2rem] border border-amber-100 flex items-start gap-4 animate-in slide-in-from-bottom duration-500">
-          <div className="p-2 bg-amber-500 rounded-xl text-white shadow-lg shadow-amber-200">
+      {specimen.telemetry?.moisture && specimen.telemetry.moisture < 0.45 && (
+        <div className="mb-8 p-4 bg-amber-500/10 rounded-[1.5rem] border border-amber-500/20 flex items-start gap-4 animate-in slide-in-from-bottom duration-500">
+          <div className="p-2 bg-amber-500 rounded-xl text-black shadow-lg shadow-amber-500/50">
             <AlertCircle className="w-5 h-5" />
           </div>
           <div>
-            <h5 className="text-sm font-black text-amber-900 mb-0.5">Smart Home Alert</h5>
-            <p className="text-[11px] font-bold text-amber-700/80 leading-relaxed">
-              Critical {isFungal ? "humidity" : "moisture"} drop detected. Automated irrigation reservoir is low. Please refill.
+            <h5 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-0.5">Automated Irrigation Triggered</h5>
+            <p className="text-[11px] font-bold text-white/60 leading-tight">
+              Sovereign {isFungal ? "humidity" : "moisture"} floor reached. Autonomous systems engaged to restore homeostasis.
             </p>
           </div>
         </div>
       )}
 
-      <div className="mb-8">
-        <h4 className="text-lg font-extrabold text-brand-dark mb-4">Institutional Provenance</h4>
+      {/* Biological Neural Prophecy */}
+      {healthForecast && (
+        <div className="mb-8 border-t border-white/5 pt-8">
+          <NeuralForecastGraph forecast={healthForecast} />
+        </div>
+      )}
+
+      <div className="mb-8 border-t border-white/5 pt-8">
+        <h4 className="text-[11px] font-black text-white/40 uppercase tracking-widest mb-4">RAIS Governance Audit</h4>
         <div className="space-y-3">
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-            <div className="flex items-center gap-3 mb-3">
-              <ShieldCheck className={`w-5 h-5 ${specimen.lastVitalSignature || specimen.hardware_attestation_statement ? 'text-emerald-500' : 'text-slate-300'}`} />
-              <span className="text-xs font-black text-brand-dark uppercase tracking-widest">
-                {specimen.hardware_attestation_statement ? 'Hardware Enclave Verified' : specimen.lastVitalSignature ? 'Proof-of-Care Verified' : 'Unsigned Record'}
-              </span>
-            </div>
-            {(specimen.lastVitalSignature || specimen.hardware_attestation_statement) && (
-              <code className="block p-2 bg-white rounded-lg text-[10px] text-brand-dark/40 font-mono truncate">
-                {specimen.hardware_attestation_statement || specimen.lastVitalSignature}
-              </code>
-            )}
-            
-            <div className="mt-4 pt-4 border-t border-slate-200/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-brand-dark/20" />
-                  <span className="text-[10px] font-black text-brand-dark/40 uppercase">Regulatory Status</span>
-                </div>
-                <span className={`px-2 py-0.5 rounded-md text-[10px] font-black ${specimen.complianceStatus && specimen.complianceStatus !== 'none' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                  {specimen.complianceStatus && specimen.complianceStatus !== 'none' ? `CITES APP ${specimen.complianceStatus}` : 'GLOBAL CLEARANCE'}
+          <div className={`p-4 rounded-2xl border transition-all ${raisAudit.isValid ? 'bg-brand-green/5 border-brand-green/20' : 'bg-red-500/5 border-red-500/20'}`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <ShieldCheck className={`w-5 h-5 ${raisAudit.isValid ? 'text-brand-green' : 'text-red-400'}`} />
+                <span className={`text-[10px] font-black uppercase tracking-widest ${raisAudit.isValid ? 'text-brand-green' : 'text-red-400'}`}>
+                  {raisAudit.isValid ? 'Protocol Compliant (GOVERNED)' : 'Protocol Violation (AUDIT)'}
                 </span>
               </div>
+              <div className="px-2 py-0.5 bg-white/5 rounded-md border border-white/10">
+                <span className="text-[8px] font-black text-white/40 uppercase">v2.2.0</span>
+              </div>
             </div>
+
+            {!raisAudit.isValid && (
+              <div className="mb-4 space-y-1">
+                {raisAudit.violations.map((v, i) => (
+                  <div key={i} className="flex items-center gap-2 text-[9px] font-black text-red-300 uppercase tracking-tight">
+                    <AlertCircle size={10} />
+                    {v.replace(/_/g, ' ')}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {(specimen.hardware_attestation_statement || specimen.last_vital_signature) && (
+              <div className="mb-4">
+                <span className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1 block">Seal of Governance (Anchored)</span>
+                <code className="block p-2 bg-black/40 rounded-lg text-[9px] text-white/50 font-mono truncate border border-white/5">
+                  {specimen.hardware_attestation_statement || specimen.last_vital_signature}
+                </code>
+              </div>
+            )}
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-3 h-3 text-white/20" />
+                <span className="text-[9px] font-black text-white/30 uppercase">Regulatory Class</span>
+              </div>
+              <span className={`px-2 py-0.5 rounded-md text-[9px] font-black tabular-nums tracking-tighter ${specimen.compliance_status && specimen.compliance_status !== 'none' ? 'bg-red-500/20 text-red-400 border border-red-500/20' : 'bg-brand-green/20 text-brand-green border border-brand-green/20'}`}>
+                {specimen.compliance_status && specimen.compliance_status !== 'none' ? `CITES APPENDIX ${specimen.compliance_status}` : 'GLOBAL WHITE-LISTED'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
 
             {/* Institutional Co-sign Action */}
             {!specimen.custodian_id && (
               <button 
-                className="w-full mt-4 py-2.5 bg-brand-dark text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-green transition-all shadow-lg"
+                className="w-full mt-4 py-2.5 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-green transition-all shadow-lg"
                 onClick={() => alert("Requesting Institutional Co-sign from NGO/Regulator Swarm...")}
               >
                 Request Institutional Co-sign
               </button>
             )}
+
+
+      {/* Autonomous Treatment Protocols */}
+      {tasks.length > 0 && (
+        <div className="mb-8 border-t border-white/5 pt-8">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-[11px] font-black text-white/40 uppercase tracking-widest">Remediation Protocols</h4>
+            <span className="text-[10px] font-black text-brand-green uppercase tracking-tighter">{tasks.filter(t => t.status === 'completed').length}/{tasks.length} Resolved</span>
+          </div>
+          <div className="space-y-3">
+            {tasks.map((task) => (
+              <div key={task.id} className="p-4 bg-white/5 border border-white/10 rounded-2xl group hover:border-brand-green/20 transition-all">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`p-1.5 rounded-lg ${task.status === 'completed' ? 'bg-brand-green/10 text-brand-green' : 'bg-orange-500/10 text-orange-400'}`}>
+                    {task.status === 'completed' ? <ShieldCheck size={14} /> : <Activity size={14} />}
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/80">{task.name}</span>
+                  <span className={`ml-auto text-[8px] font-black uppercase px-1.5 py-0.5 rounded border ${
+                    task.status === 'completed' ? 'border-brand-green/20 text-brand-green' : 'border-orange-500/20 text-orange-400'
+                  }`}>
+                    {task.status}
+                  </span>
+                </div>
+                <p className="text-[10px] text-white/40 leading-tight mb-2">{task.description}</p>
+                {task.status === 'pending' && task.approvalRequired && (
+                  <div className="flex items-center gap-2 text-[8px] font-black text-amber-500 uppercase tracking-widest">
+                    <AlertCircle size={10} />
+                    Awaiting Custodian Authorization
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="mb-8">
-        <h4 className="text-lg font-extrabold text-brand-dark mb-4">Care Reminders</h4>
-        <div className="space-y-3">
-          <ReminderItem icon={isAnimalia ? Beef : isFungal ? Waves : Droplets} label={isAnimalia ? "Feeding in 4h" : isFungal ? "Mist in 2 Days" : "Water in 2 Days"} color="bg-blue-500" />
-          <ReminderItem icon={Zap} label={isAnimalia ? "Vitamins: Daily" : isFungal ? "Supplement: 10 Days" : "Fertilizing: 10 Days"} color="bg-orange-500" />
-          <ReminderItem icon={isAnimalia ? Activity : isFungal ? Thermometer : Waves} label={isAnimalia ? "Walk: Scheduled" : isFungal ? "Temp: Stable" : "Moisture: Moist"} color="bg-emerald-500" />
+      <div className="mb-8 border-t border-white/5 pt-8">
+        <h4 className="text-[11px] font-black text-white/40 uppercase tracking-widest mb-4">Registry Feed</h4>
+        <div className="space-y-2">
+          <ReminderItem icon={isAnimalia ? Beef : isFungal ? Waves : Droplets} label={isAnimalia ? "Nutrient Distribution: 4h" : isFungal ? "Atmospheric Mist: 2d" : "Hydration Cycle: 2d"} color="bg-blue-500/20" />
+          <ReminderItem icon={Zap} label={isAnimalia ? "Vital Booster: Daily" : isFungal ? "Mineralization: 10d" : "Soil Enrichment: 10d"} color="bg-orange-500/20" />
         </div>
       </div>
 
-      <div className="mb-8">
+      <div className="mb-8 border-t border-white/5 pt-8">
         <LineageView specimenName={specimen.nickname} />
       </div>
 
@@ -285,13 +416,13 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
 
 function DetailRow({ icon: Icon, label, value, color, bg }: { icon: LucideIcon, label: string, value: string, color: string, bg: string }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 py-1">
       <div className={`p-1.5 rounded-lg ${bg} ${color}`}>
-        <Icon className="w-4 h-4" />
+        <Icon className="w-3.5 h-3.5" />
       </div>
-      <div className="flex-1 flex items-center justify-between">
-        <span className="text-sm font-bold text-brand-dark/40">{label} :</span>
-        <span className="text-sm font-bold text-brand-dark">{value}</span>
+      <div className="flex-1 flex items-center justify-between border-b border-white/5 pb-1">
+        <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">{label}</span>
+        <span className="text-[11px] font-black text-white/80 uppercase tracking-tight">{value}</span>
       </div>
     </div>
   );
@@ -299,15 +430,15 @@ function DetailRow({ icon: Icon, label, value, color, bg }: { icon: LucideIcon, 
 
 function ReminderItem({ icon: Icon, label, color }: { icon: LucideIcon, label: string, color: string }) {
   return (
-    <div className="flex items-center justify-between p-3 rounded-2xl bg-white border border-brand-dark/5 hover:border-brand-green/20 transition-all cursor-pointer group">
+    <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-brand-green/20 transition-all cursor-pointer group">
       <div className="flex items-center gap-3">
-        <div className={`w-8 h-8 rounded-full ${color} flex items-center justify-center text-white`}>
+        <div className={`w-8 h-8 rounded-xl ${color} flex items-center justify-center text-white/80`}>
           <Icon className="w-4 h-4" />
         </div>
-        <span className="text-sm font-extrabold text-brand-dark/80 group-hover:text-brand-green transition-colors">{label}</span>
+        <span className="text-[10px] font-black text-white/60 uppercase tracking-widest group-hover:text-brand-green transition-colors">{label}</span>
       </div>
-      <div className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center">
-         <div className="w-2 h-2 rounded-full bg-slate-400" />
+      <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
+         <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
       </div>
     </div>
   );
@@ -315,10 +446,10 @@ function ReminderItem({ icon: Icon, label, color }: { icon: LucideIcon, label: s
 
 function VitalCard({ icon: Icon, label, value, color }: { icon: LucideIcon, label: string, value: string, color: string }) {
   return (
-    <div className="bg-white border border-slate-100 p-3 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm hover:shadow-md transition-shadow">
-      <Icon className={`w-5 h-5 ${color} mb-1`} />
-      <span className="text-[10px] font-black text-brand-dark/20 uppercase tracking-tighter mb-0.5">{label}</span>
-      <span className="text-sm font-black text-brand-dark">{value}</span>
+    <div className="bg-white/5 border border-white/5 p-3 rounded-2xl flex flex-col items-center justify-center text-center shadow-lg hover:bg-white/10 transition-all">
+      <Icon className={`w-5 h-5 ${color} mb-1 opacity-80`} />
+      <span className="text-[8px] font-black text-white/20 uppercase tracking-tighter mb-0.5">{label}</span>
+      <span className="text-xs font-black text-white/90 tabular-nums">{value}</span>
     </div>
   );
 }
