@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Leaf, Droplets, MapPin, Sun, ArrowRight, ArrowLeft, Check, Waves, Flower2, Heart } from "lucide-react";
+import { toast } from "sonner";
 import Image from "next/image";
 import { useSpecimenData } from "@/hooks/use-specimen-data";
-import { type AddSpecimenInput } from "@/app/actions/specimen-actions";
 import { useSyncMutation } from "@/hooks/use-mutation";
 
 const STEPS = [
@@ -102,40 +102,45 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
     setError(null);
 
     try {
-      const specimenData = {
-        nickname: nickname.trim(),
-        species_name: speciesName.trim() || undefined,
-        notes: notes.trim() || undefined,
-        location,
-        kingdom,
-        ...(kingdom === "Plantae" ? {
-          light: light || undefined,
-          watering: watering || undefined,
-        } : kingdom === "Fungi" ? {
-          substrate: substrate || undefined,
-          misting_schedule: watering || undefined,
-        } : kingdom === "Animalia" ? {
-          heart_rate: heartRate === "" ? undefined : Number(heartRate),
-          activity_level: activityLevel === "" ? undefined : Number(activityLevel),
-          dietary_notes: dietaryNotes.trim() || undefined,
-        } : {}),
-        image: image ? (() => {
-          const formData = new FormData();
-          formData.append("file", image);
-          return formData;
-        })() : undefined,
-      };
+      const formData = new FormData();
+      formData.append("nickname", nickname.trim());
+      formData.append("species_name", speciesName.trim());
+      formData.append("notes", notes.trim());
+      formData.append("location", location);
+      formData.append("kingdom", kingdom);
+      
+      if (kingdom === "Plantae") {
+        formData.append("light", light);
+        formData.append("watering", watering);
+      } else if (kingdom === "Fungi") {
+        formData.append("substrate", substrate);
+        formData.append("misting_schedule", watering);
+      } else if (kingdom === "Animalia") {
+        if (heartRate !== "") formData.append("heart_rate", String(heartRate));
+        if (activityLevel !== "") formData.append("activity_level", String(activityLevel));
+        formData.append("dietary_notes", dietaryNotes.trim());
+      }
 
-      const result = await performAdd(specimenData as AddSpecimenInput);
+      if (image) {
+        formData.append("file", image);
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await performAdd(formData as any);
 
       if (result.success) {
+        toast.success("Specimen successfully anchored to the Sovereign Registry.");
         onClose?.();
         router.refresh();
       } else {
-        setError(result.error || "Failed to add specimen.");
+        const msg = result.error || "Failed to add specimen.";
+        setError(msg);
+        toast.error(msg);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      setError(msg);
+      toast.error(msg);
     }
   };
 

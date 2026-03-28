@@ -9,7 +9,7 @@ import { CommandPalette } from "@/components/layout/command-palette";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { SyncStatusProvider } from "@/components/providers/sync-status-provider";
 import { SyncStatusIndicator } from "@/components/layout/sync-status-indicator";
-import { FeedbackModal } from "@/components/layout/feedback-modal";
+import { FeedbackButton } from "@/components/feedback/feedback-button";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -96,7 +96,7 @@ export default async function RootLayout({
             <main className="min-h-[calc(100vh-57px)]">
               {children}
             </main>
-            <FeedbackModal />
+            <FeedbackButton />
           </SyncStatusProvider>
         </ThemeProvider>
       </body>

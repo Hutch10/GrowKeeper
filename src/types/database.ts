@@ -246,6 +246,40 @@ export interface Database {
           }
         ];
       };
+      alpha_events: {
+        Row: {
+          id: string;
+          created_at: string;
+          user_id: string | null;
+          event_type: string;
+          metadata: Json | null;
+          route: string | null;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          user_id?: string | null;
+          event_type: string;
+          metadata?: Json | null;
+          route?: string | null;
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          user_id?: string | null;
+          event_type?: string;
+          metadata?: Json | null;
+          route?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "alpha_events_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

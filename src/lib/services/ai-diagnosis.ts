@@ -6,6 +6,7 @@
 import OpenAI from "openai";
 import { logger } from '../observability/logger';
 import { metrics } from '../observability/metrics';
+import { trackAlphaEvent } from './alpha-telemetry';
 
 const openai = process.env.OPENAI_API_KEY 
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -99,10 +100,25 @@ export async function diagnoseSpecimen(imageData: string, context?: string): Pro
     diagnosisCache.set(imageHash, JSON.stringify(result));
     
     metrics.trackAILatency(Date.now() - startTime, 'cloud');
+    
+    // Track Alpha Event
+    trackAlphaEvent("ai_diagnosis_run", { 
+      kingdom: result.kingdom, 
+      score: result.healthScore,
+      issues_count: result.issues.length 
+    });
+
     return result;
-  } catch (err) {
+    } catch (err) {
     logger.error('AIDiagnosis', 'Tier 3 Cloud Analysis failed.', err as Error);
     metrics.trackAILatency(-1, 'cloud');
+    
+    // Track Alpha Event Failure
+    trackAlphaEvent("system_error", { 
+      component: "AIDiagnosis", 
+      error: (err as Error).message 
+    });
+
     throw err;
   }
 }

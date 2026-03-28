@@ -20,7 +20,7 @@ import { BaseSpecimen } from '@/types/specimen';
 export function CommandCenter() {
   const [activeTab, setActiveTab] = useState<'inventory' | 'simulation'>('inventory');
   const [isSovereignMode, setIsSovereignMode] = useState(false);
-  const { specimens } = useSpecimenData();
+  const { specimens, loading } = useSpecimenData();
   const [searchQuery, setSearchQuery] = useState("");
   const [isMounted, setIsMounted] = useState(false);
 
@@ -135,15 +135,41 @@ export function CommandCenter() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                  className="w-full"
                 >
-                  {filteredSpecimens.map(s => (
-                    <SpecimenSummaryCard 
-                      key={s.id} 
-                      specimen={s} 
-                      onClick={() => {}} 
-                    />
-                  ))}
+                  {loading ? (
+                    <div className="h-64 flex flex-col items-center justify-center bg-white/5 rounded-3xl border border-white/5 border-dashed">
+                      <div className="w-12 h-12 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-4" />
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Synchronizing Registry...</p>
+                    </div>
+                  ) : filteredSpecimens.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredSpecimens.map(s => (
+                        <SpecimenSummaryCard 
+                          key={s.id} 
+                          specimen={s} 
+                          onClick={() => {}} 
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-16 text-center bg-white/5 rounded-[3rem] border border-dashed border-white/10 shadow-2xl">
+                      <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-8 relative">
+                        <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping" />
+                        <Shield className="w-10 h-10 text-emerald-400 relative z-10" />
+                      </div>
+                      <h3 className="text-3xl font-black text-white mb-3 tracking-tight">No Specimens In Registry</h3>
+                      <p className="text-white/40 font-bold mb-10 text-sm max-w-sm mx-auto leading-relaxed">
+                        Your autonomous zone is currently vacant. Begin your alpha mission by anchoring your first botanical asset to the Sovereign Feed.
+                      </p>
+                      <button 
+                        onClick={runSovereignScan}
+                        className="px-10 py-4 bg-emerald-500 text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-[0_0_50px_rgba(16,185,129,0.3)] hover:scale-105 transition-all active:scale-95"
+                      >
+                        Assemble First Specimen
+                      </button>
+                    </div>
+                  )}
                 </motion.div>
               ) : (
                 <motion.div 

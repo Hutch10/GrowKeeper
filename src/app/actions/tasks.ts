@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { trackAlphaEvent } from "@/lib/services/alpha-telemetry";
 import type { Database, TaskType } from "@/types/database";
 import type { ActionResult } from "@/app/actions/types";
 import { getAuthenticatedUser } from "@/lib/auth-server";
@@ -104,6 +105,13 @@ export async function addSpecimenTask(input: AddTaskInput): Promise<ActionResult
     if (error) {
       return { success: false, data: null, error: normalizeActionError(error).message };
     }
+
+    // Track Alpha Event
+    await trackAlphaEvent("task_created", { 
+      id: task.id, 
+      type: input.task_type, 
+      specimen_id: input.specimen_id 
+    }, "/tasks");
 
     revalidatePath("/dashboard");
     revalidatePath(`/plants/${input.specimen_id}`);
@@ -228,6 +236,13 @@ export async function markTaskComplete(taskId: string, specimenId: string): Prom
     if (!updatedTask) {
       return { success: false, data: null, error: "Task not found or unauthorized access." };
     }
+
+    // Track Alpha Event
+    await trackAlphaEvent("task_completed", { 
+      id: updatedTask.id, 
+      type: updatedTask.task_type, 
+      specimen_id: updatedTask.specimen_id 
+    }, "/tasks");
 
     revalidatePath("/dashboard");
     revalidatePath(`/plants/${specimenId}`);

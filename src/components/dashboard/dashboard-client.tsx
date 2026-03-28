@@ -7,7 +7,7 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { SpecimenSummaryCard } from "@/components/dashboard/specimen-summary-card";
 import { ArticleCard } from "@/components/dashboard/article-card";
 import { SpecimenDetailPanel } from "@/components/dashboard/specimen-detail-panel";
-import { Droplets, Calendar, Waves, Loader2 } from "lucide-react";
+import { Droplets, Calendar, Waves, Loader2, Leaf } from "lucide-react";
 
 import { MarketplacePreview } from "@/components/dashboard/marketplace-preview";
 import { WeatherBanner } from "@/components/dashboard/weather-banner";
@@ -182,13 +182,21 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
               ))}
             </div>
           ) : (
-            <div className="p-8 md:p-12 text-center bg-white rounded-[1.5rem] md:rounded-[2rem] border border-dashed border-brand-dark/20">
-              <p className="text-brand-dark/40 font-bold mb-4 text-sm md:text-base">No specimens found. {isGuest ? "Add your first one below!" : ""}</p>
-              {isGuest && (
-                <button className="px-6 py-2 bg-brand-green text-white rounded-xl font-bold hover:bg-brand-green-dark transition-all">
-                  Add Specimen
-                </button>
-              )}
+            <div className="p-12 text-center bg-white rounded-[2.5rem] border border-dashed border-brand-dark/10 shadow-sm animate-in fade-in zoom-in-95 duration-700">
+              <div className="w-20 h-20 bg-brand-green/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Leaf className="w-10 h-10 text-brand-green" />
+              </div>
+              <h3 className="text-2xl font-black text-brand-dark mb-2">No Specimens In Registry</h3>
+              <p className="text-brand-dark/40 font-bold mb-8 text-sm md:text-base max-w-xs mx-auto">
+                Begin your alpha testing by anchoring your first botanical asset to the Sovereign Feed.
+              </p>
+              <button 
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                onClick={() => (window as any).dispatchAddSpecimen?.()}
+                className="px-8 py-3 bg-brand-dark text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all active:scale-95"
+              >
+                Assemble Specimen
+              </button>
             </div>
           )}
         </section>
