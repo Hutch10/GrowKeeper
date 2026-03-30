@@ -82,10 +82,10 @@ export async function checkMutationGuard(
     const lockKey = `@growkeeper/idempotency:${keyBase}:${payloadHash}`;
     
     // SET NX (Not Exists) with 60s expiration
-    // This is a single atomic operation in Redis.
+    // Upstash Redis returns "OK" on success, null if key exists.
     const lockAcquired = await client.set(lockKey, "LOCKED", { nx: true, ex: 60 });
 
-    if (!lockAcquired) {
+    if (lockAcquired !== "OK") {
        return { 
         allowed: false, 
         error: "Mutation anchored. Identical duplicate request detected in registry." 

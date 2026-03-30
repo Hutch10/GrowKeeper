@@ -13,19 +13,72 @@ import {
 } from 'lucide-react';
 import { SpecimenSummaryCard } from '../specimens/specimen-summary-card';
 import { GlowMesh } from '../ui/glow-mesh';
-import { sovereignProtocolEnforcer } from '@/lib/services/sovereign-enforcer';
 import { useSpecimenData } from '@/hooks/use-specimen-data';
-import { BaseSpecimen } from '@/types/specimen';
+import type { BaseSpecimen } from '@/types/specimen';
+import type { SpecimenRow } from '@/app/actions/types';
+import { createBrowserSupabaseClient } from '@/lib/supabase-browser';
+import { SovereignAction, sovereignProtocolEnforcer } from '@/lib/services/sovereign-enforcer';
 
-export function CommandCenter() {
+function TabButton({ 
+  active, 
+  onClick, 
+  icon: Icon, 
+  label 
+}: { 
+  active: boolean, 
+  onClick: () => void, 
+  icon: React.ElementType, 
+  label: string 
+}) {
+  return (
+    <button 
+      onClick={onClick}
+      className={`flex items-center gap-2.5 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+        active ? 'bg-white text-black' : 'text-white/40 hover:text-white'
+      }`}
+    >
+      <Icon className="w-3.5 h-3.5" />
+      {label}
+    </button>
+  );
+}
+
+export function CommandCenter({ 
+  initialSpecimens 
+}: { 
+  initialSpecimens?: BaseSpecimen[]
+}) {
   const [activeTab, setActiveTab] = useState<'inventory' | 'simulation'>('inventory');
   const [isSovereignMode, setIsSovereignMode] = useState(false);
-  const { specimens, loading } = useSpecimenData();
+  const [auditLog, setAuditLog] = useState<Partial<SovereignAction>[]>(sovereignProtocolEnforcer.getAuditLog());
+  
+  // Use the hook for live updates, initialized with server-side data if available.
+  const { specimens, loading } = useSpecimenData(initialSpecimens as SpecimenRow[]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isMounted, setIsMounted] = useState(false);
 
   React.useEffect(() => {
     setIsMounted(true);
+    const supabase = createBrowserSupabaseClient();
+    
+    const channel = supabase
+      .channel('alpha_events')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'alpha_events' }, (payload: { new: { id: string; created_at: string; event_type: string } }) => {
+        const newEvent = payload.new;
+        const mappedAction: Partial<SovereignAction> = {
+          id: newEvent.id,
+          timestamp: newEvent.created_at,
+          type: 'Telemetry_Audit',
+          status: 'Completed',
+          impact: `[REMOTE] ${newEvent.event_type.replace(/_/g, ' ')} signal received.`,
+        };
+        setAuditLog(prev => [mappedAction, ...prev].slice(0, 10));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const filteredSpecimens = (specimens as BaseSpecimen[]).filter(s => 
@@ -38,6 +91,7 @@ export function CommandCenter() {
       filteredSpecimens.map(s => ({ health: s.health, nickname: s.nickname }))
     );
     console.log("Sovereign Actions Performed:", actions);
+    setAuditLog(sovereignProtocolEnforcer.getAuditLog());
   };
 
   return (
@@ -199,12 +253,12 @@ export function CommandCenter() {
             </div>
             
             <div className="flex-1 overflow-y-auto flex flex-col gap-4">
-              {sovereignProtocolEnforcer.getAuditLog().slice(0, 10).map(action => (
-                <div key={action.id} className="p-4 rounded-2xl bg-white/5 border border-white/5">
+              {auditLog.slice(0, 10).map((action, i) => (
+                <div key={action.id || i} className="p-4 rounded-2xl bg-white/5 border border-white/5">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[9px] font-black uppercase text-emerald-400">{action.type}</span>
                     <span className="text-[8px] font-medium text-white/20">
-                      {isMounted ? new Date(action.timestamp).toLocaleTimeString() : "--:--:--"}
+                      {isMounted && action.timestamp ? new Date(action.timestamp).toLocaleTimeString() : "--:--:--"}
                     </span>
                   </div>
                   <p className="text-[10px] text-white/60 leading-relaxed">{action.impact || "Autonomous heartbeat logged."}</p>
@@ -217,15 +271,3 @@ export function CommandCenter() {
     </div>
   );
 }
-
-const TabButton = ({ active, onClick, icon: Icon, label }: { active: boolean, onClick: () => void, icon: React.ElementType, label: string }) => (
-  <button 
-    onClick={onClick}
-    className={`flex items-center gap-2.5 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-      active ? 'bg-white text-black' : 'text-white/40 hover:text-white'
-    }`}
-  >
-    <Icon className="w-3.5 h-3.5" />
-    {label}
-  </button>
-);

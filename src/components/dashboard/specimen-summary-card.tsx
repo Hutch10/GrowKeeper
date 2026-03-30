@@ -108,7 +108,6 @@ export function SpecimenSummaryCard({
           src={displayImage}
           alt={displayNickname}
           fill
-          unoptimized
           className="object-cover transition-transform group-hover:scale-110 duration-700"
         />
         
@@ -165,7 +164,7 @@ export function SpecimenSummaryCard({
             </div>
             <div className="flex items-center gap-1">
               <Zap className="w-2.5 h-2.5 text-yellow-400/60" />
-              <span className="text-[9px] font-black tabular-nums text-white/40">{specimen.telemetry?.temperature || 0}°C</span>
+              <span className="text-[9px] font-black tabular-nums text-white/40">{specimen.telemetry?.temperature ? Number(specimen.telemetry.temperature).toFixed(1) : "0.0"}°C</span>
             </div>
           </div>
         </div>

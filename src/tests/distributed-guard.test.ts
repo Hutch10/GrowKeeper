@@ -25,7 +25,7 @@ describe("Distributed Mutation Guard", () => {
     
     // Defaults
     mockRatelimit.limit.mockResolvedValue({ success: true });
-    mockRedis.get.mockResolvedValue(null);
+    mockRedis.set.mockResolvedValue("OK");
   });
 
   it("should allow a valid, first-time mutation", async () => {
@@ -35,11 +35,8 @@ describe("Distributed Mutation Guard", () => {
   });
 
   it("should block a duplicate payload within the 60s window (Idempotency)", async () => {
-    const payloadStr = JSON.stringify(payload);
-    const { createHash } = await import("node:crypto");
-    const payloadHash = createHash("sha256").update(payloadStr).digest("hex");
-    
-    mockRedis.get.mockResolvedValue(payloadHash);
+    // Mock Redis returning null (key already exists)
+    mockRedis.set.mockResolvedValue(null);
 
     const result = await checkMutationGuard(userId, actionName, payload);
     
@@ -57,7 +54,7 @@ describe("Distributed Mutation Guard", () => {
   });
 
   it("should fail gracefully and allow mutation if Redis is unreachable", async () => {
-    mockRedis.get.mockRejectedValue(new Error("Connection Timeout"));
+    mockRedis.set.mockRejectedValue(new Error("Connection Timeout"));
 
     const result = await checkMutationGuard(userId, actionName, payload);
     

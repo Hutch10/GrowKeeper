@@ -10,6 +10,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'api.dicebear.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'sb_publishable_hCn4hpKWUfJtVrQKyRMVBA_py4PiUQk.supabase.co',
+      },
     ],
   },
 };

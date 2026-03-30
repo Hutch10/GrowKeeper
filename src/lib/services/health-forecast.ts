@@ -32,8 +32,9 @@ export class HealthForecastService {
       ? 1 
       : Math.max(0, 1 - Math.abs(temperature - 23) / 15);
 
-    // Moisture curve: Optimal at 0.6, stress at <0.2 or >0.9
-    const moistureHomeostasis = 1 - Math.pow(moisture - 0.6, 2) * 2;
+    // Moisture curve: Optimal at 0.6, severe stress at <0.2 or >0.9
+    // Intensified quadratic penalty (3.0 instead of 2.0)
+    const moistureHomeostasis = 1 - Math.pow(moisture - 0.6, 2) * 3;
     
     // Light: Saturates at 0.8
     const lightEfficiency = light > 0.8 ? 1 : light / 0.8;
@@ -57,7 +58,8 @@ export class HealthForecastService {
       predictedScore: predicted,
       trend: driftValue > 1 ? 'Improving' : driftValue < -1 ? 'Degrading' : 'Stable',
       confidence: 0.85,
-      anomalyDetected: current < 30 || Math.abs(driftValue) > 10
+      // Anomaly detection: Trigger if vitality < 50 or drift is extreme
+      anomalyDetected: current < 50 || Math.abs(driftValue) > 10
     };
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Award, ShieldCheck, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const TIERS = [
   {
@@ -48,6 +49,8 @@ const TIERS = [
 ];
 
 export function BillingUI() {
+  const router = useRouter();
+
   return (
     <div className="max-w-6xl mx-auto px-6 py-12">
       <header className="text-center mb-20">
@@ -120,7 +123,7 @@ export function BillingUI() {
             <button 
               onClick={() => {
                 const query = new URLSearchParams({ plan: tier.name, price: tier.price }).toString();
-                window.location.href = `/settings/checkout?${query}`;
+                router.push(`/settings/checkout?${query}`);
               }}
               className={`w-full py-5 rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95 ${
               tier.popular 

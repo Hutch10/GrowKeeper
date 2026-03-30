@@ -52,7 +52,7 @@ export async function middleware(request: NextRequest) {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self'",
-    "connect-src 'self' blob: data: https://*.supabase.co https://api.open-meteo.com https://api.openai.com wss://y-webrtc-signaling-eu.herokuapp.com wss://y-webrtc-signaling-us.herokuapp.com wss://y-webrtc-signaling.p-p.dev",
+    "connect-src 'self' blob: data: https://*.supabase.co wss://*.supabase.co https://api.open-meteo.com https://api.openai.com wss://y-webrtc-signaling-eu.herokuapp.com wss://y-webrtc-signaling-us.herokuapp.com wss://y-webrtc-signaling.p-p.dev",
     "worker-src 'self' blob:",
     "frame-ancestors 'none'",
     "form-action 'self'",
