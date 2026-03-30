@@ -40,6 +40,13 @@ export interface GeofenceResult {
 export function checkLegalStatus(lng: number, lat: number): GeofenceResult {
   const point = turf.point([lng, lat]);
   
+  if (turf.booleanPointInPolygon(point, BOUNDARIES.EPZ_SENSITIVE)) {
+    return {
+      status: 'danger',
+      message: 'EPZ DETECTED: Critical ecological area. Bio-sampling and unauthorized collection are strictly prohibited.'
+    };
+  }
+
   if (turf.booleanPointInPolygon(point, BOUNDARIES.PRIVATE_LAND)) {
     return {
       status: 'danger',
@@ -51,13 +58,6 @@ export function checkLegalStatus(lng: number, lat: number): GeofenceResult {
     return {
       status: 'warning',
       message: 'BLM LAND: Collection permits may be required. Check local regulations.'
-    };
-  }
-  
-  if (turf.booleanPointInPolygon(point, BOUNDARIES.EPZ_SENSITIVE)) {
-    return {
-      status: 'danger',
-      message: 'EPZ DETECTED: Critical ecological area. Bio-sampling and unauthorized collection are strictly prohibited.'
     };
   }
   

@@ -30,6 +30,8 @@ const baseSpecimenSchema = z.object({
   hardware_attestation_statement: z.string().optional().nullable(),
   last_vital_signature: z.string().optional().nullable(),
   compliance_status: z.string().optional().nullable(),
+  lat: z.number().optional().nullable(),
+  lon: z.number().optional().nullable(),
 });
 
 const plantSchema = baseSpecimenSchema.extend({

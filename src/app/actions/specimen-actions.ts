@@ -41,6 +41,8 @@ export async function addSpecimen(formData: FormData): Promise<ActionResult<Spec
   const location = (formData.get("location") as string) || "Living Room";
   const hardware_attestation_statement = (formData.get("hardware_attestation_statement") as string) || null;
   const last_vital_signature = (formData.get("last_vital_signature") as string) || null;
+  const lat = formData.get("lat") ? Number(formData.get("lat")) : null;
+  const lon = formData.get("lon") ? Number(formData.get("lon")) : null;
 
   const validated = addSpecimenSchema.safeParse({
     nickname,
@@ -50,6 +52,8 @@ export async function addSpecimen(formData: FormData): Promise<ActionResult<Spec
     location,
     hardware_attestation_statement,
     last_vital_signature,
+    lat,
+    lon,
   });
 
   if (!validated.success) {
@@ -108,6 +112,8 @@ export async function addSpecimen(formData: FormData): Promise<ActionResult<Spec
       light: 0.5,
       temperature: 21,
     },
+    lat,
+    lon,
     created_at: new Date().toISOString(),
     last_modified: new Date().toISOString(),
     last_action_type: "CREATE",
@@ -260,6 +266,8 @@ export async function updateSpecimen(data: UpdateSpecimenInput): Promise<ActionR
     notes: data.notes?.trim() || null,
     kingdom: data.kingdom,
     hardware_attestation_statement: data.hardware_attestation_statement || null,
+    lat: data.lat ?? null,
+    lon: data.lon ?? null,
     ...(imageUrl !== undefined && { image_url: imageUrl }),
     last_modified: new Date().toISOString(),
     last_action_type: "UPDATE",

@@ -1,15 +1,26 @@
 import { Suspense } from "react";
 import { CommandCenter } from "@/components/dashboard/command-center";
 import { getSpecimens } from "@/app/actions/specimen-actions";
+import { getTasks } from "@/app/actions/tasks";
 import { SpecimenListSkeleton } from "@/components/ui/skeleton";
 
 export const dynamic = "force-dynamic";
 
 async function DashboardRegistry() {
-  const result = await getSpecimens();
-  const specimens = result.success ? result.data : [];
+  const [specimenResult, taskResult] = await Promise.all([
+    getSpecimens(),
+    getTasks()
+  ]);
+
+  const specimens = specimenResult.success ? specimenResult.data : [];
+  const tasks = taskResult.success ? taskResult.data : [];
   
-  return <CommandCenter initialSpecimens={specimens || []} />;
+  return (
+    <CommandCenter 
+      initialSpecimens={specimens || []} 
+      initialTasks={tasks || []} 
+    />
+  );
 }
 
 export default function DashboardPage() {

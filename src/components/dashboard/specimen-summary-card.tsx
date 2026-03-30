@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 
 import Image from "next/image";
-import { Heart, Leaf, Waves, Shield, Loader2, Zap } from "lucide-react";
+import { Heart, Leaf, Waves, Shield, Loader2, Zap, MapPin, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Kingdom, BaseSpecimen } from "@/types/specimen";
 import { useSpecimenData } from "@/hooks/use-specimen-data";
+import { checkLegalStatus } from "@/lib/geofencing";
 
 interface SpecimenSummaryCardProps {
   id?: string;
@@ -71,6 +72,10 @@ export function SpecimenSummaryCard({
 
   const isHealthy = (specimen.health || 0) > 80;
   const isStressed = (specimen.health || 0) < 40;
+
+  const geofence = specimen.lat && specimen.lon 
+    ? checkLegalStatus(specimen.lon, specimen.lat) 
+    : null;
 
   return (
     <motion.div 
@@ -137,6 +142,23 @@ export function SpecimenSummaryCard({
            kingdom === 'Animalia' ? <Heart className="w-4 h-4" /> :
            <div className="w-4 h-4 border-2 border-current rounded-full" />}
         </div>
+
+        {/* Geofencing Land Status Badge */}
+        {geofence && (
+          <div className={`absolute bottom-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-lg backdrop-blur-md border z-20 ${
+            geofence.status === 'safe' ? 'bg-emerald-500/20 border-emerald-500/20 text-emerald-400' :
+            geofence.status === 'warning' ? 'bg-yellow-500/20 border-yellow-500/20 text-yellow-500' :
+            'bg-red-500/20 border-red-500/20 text-red-500'
+          }`} title={geofence.message}>
+            {geofence.status === 'safe' ? <CheckCircle2 className="w-3 h-3" /> :
+             geofence.status === 'warning' ? <AlertTriangle className="w-3 h-3" /> :
+             <MapPin className="w-3 h-3" />}
+            <span className="text-[8px] font-black uppercase tracking-tighter tabular-nums">
+              {geofence.status === 'safe' ? 'Safe Land' : 
+               geofence.status === 'warning' ? 'Permit Req' : 'Restricted'}
+            </span>
+          </div>
+        )}
       </div>
       
       <div className="flex flex-col gap-1 mt-2 z-10 px-1">

@@ -10,7 +10,7 @@ import { checkMutationGuard } from "@/lib/mutation-utility";
 import { normalizeActionError } from "@/lib/error-normalization";
 
 type TaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
-type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
+export type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
 
 const TASK_TYPES: TaskType[] = ["watered", "fertilized", "prune", "repot", "inspect"];
 

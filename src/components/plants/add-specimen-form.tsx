@@ -60,6 +60,9 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
   const [dietaryNotes, setDietaryNotes] = useState("");
 
   const [location, setLocation] = useState("Living Room");
+  const [lat, setLat] = useState<number | null>(null);
+  const [lon, setLon] = useState<number | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
 
   // Determine if we are in modal or static mode
   const isModal = isOpen !== undefined;
@@ -77,6 +80,29 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const captureLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLat(position.coords.latitude);
+        setLon(position.coords.longitude);
+        setIsLocating(false);
+        toast.success("Coordinates anchored to specimen.");
+      },
+      (error) => {
+        setIsLocating(false);
+        console.error("Error capturing location:", error);
+        toast.error("Failed to capture GPS coordinates. Please ensure location permissions are enabled.");
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    );
   };
 
   const handleNext = () => {
@@ -120,6 +146,9 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
         if (activityLevel !== "") formData.append("activity_level", String(activityLevel));
         formData.append("dietary_notes", dietaryNotes.trim());
       }
+      
+      if (lat !== null) formData.append("lat", String(lat));
+      if (lon !== null) formData.append("lon", String(lon));
 
       if (image) {
         formData.append("file", image);
@@ -392,6 +421,31 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
               <h3 className="text-2xl font-black text-brand-dark">Sanctuary Location</h3>
               <p className="text-brand-dark/40 font-bold">Deployment zone within your habitat.</p>
             </div>
+
+            <div className="bg-brand-pink/5 border-2 border-brand-pink/10 rounded-[2rem] p-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className={`p-4 rounded-2xl transition-colors ${lat ? "bg-emerald-500 text-black" : "bg-brand-pink/10 text-brand-pink-dark"}`}>
+                  <MapPin className="w-6 h-6" />
+                </div>
+                <div>
+                  <span className="block text-[10px] font-black uppercase tracking-widest text-brand-dark/30">GPS Anchoring</span>
+                  <p className="font-extrabold text-brand-dark">
+                    {isLocating ? "Acquiring Signal..." : lat && lon ? `${lat.toFixed(4)}, ${lon.toFixed(4)}` : "No GPS signal captured"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={captureLocation}
+                disabled={isLocating}
+                className={`px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
+                  isLocating ? "bg-white/50 text-brand-dark/20 cursor-not-allowed" : "bg-brand-pink-dark text-white hover:scale-105 active:scale-95 shadow-xl shadow-brand-pink/20"
+                }`}
+              >
+                {isLocating ? "Locating..." : lat ? "Recapture" : "Capture Location"}
+              </button>
+            </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {ROOM_OPTIONS.map(room => (
                 <button

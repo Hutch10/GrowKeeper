@@ -12,10 +12,13 @@ import {
   Plus
 } from 'lucide-react';
 import { SpecimenSummaryCard } from '../specimens/specimen-summary-card';
+import { BulkWaterButton } from './bulk-water-button';
+import { BulkFertilizeButton } from './bulk-fertilize-button';
 import { GlowMesh } from '../ui/glow-mesh';
 import { useSpecimenData } from '@/hooks/use-specimen-data';
 import type { BaseSpecimen } from '@/types/specimen';
 import type { SpecimenRow } from '@/app/actions/types';
+import type { TaskRow } from '@/app/actions/tasks';
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser';
 import { SovereignAction, sovereignProtocolEnforcer } from '@/lib/services/sovereign-enforcer';
 
@@ -44,9 +47,11 @@ function TabButton({
 }
 
 export function CommandCenter({ 
-  initialSpecimens 
+  initialSpecimens,
+  initialTasks = []
 }: { 
-  initialSpecimens?: BaseSpecimen[]
+  initialSpecimens?: BaseSpecimen[],
+  initialTasks?: TaskRow[]
 }) {
   const [activeTab, setActiveTab] = useState<'inventory' | 'simulation'>('inventory');
   const [isSovereignMode, setIsSovereignMode] = useState(false);
@@ -171,13 +176,21 @@ export function CommandCenter({
               />
             </div>
             
-            <button 
-              onClick={runSovereignScan}
-              className="flex items-center gap-2.5 px-6 py-3 bg-white text-black rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-[0_10px_30px_rgba(255,255,255,0.1)]"
-            >
-              <Plus className="w-4 h-4" />
-              Add Specimen
-            </button>
+            <div className="flex items-center gap-4">
+              <BulkWaterButton 
+                tasksToWater={initialTasks.filter(t => t.task_type === "watered" && !t.completed)} 
+              />
+              <BulkFertilizeButton 
+                tasksToFertilize={initialTasks.filter(t => t.task_type === "fertilized" && !t.completed)} 
+              />
+              <button 
+                onClick={runSovereignScan}
+                className="flex items-center gap-2.5 px-6 py-3 bg-white text-black rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all shadow-[0_10px_30px_rgba(255,255,255,0.1)]"
+              >
+                <Plus className="w-4 h-4" />
+                Add Specimen
+              </button>
+            </div>
           </div>
 
           {/* Dynamic Viewport */}
