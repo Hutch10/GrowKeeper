@@ -26,8 +26,7 @@ export async function middleware(request: NextRequest) {
 
     if (!isAllowed && !isSystem) {
       const url = request.nextUrl.clone();
-      url.pathname = '/dashboard';
-      url.searchParams.set('notice', 'alpha_locked');
+      url.pathname = '/';
       return NextResponse.redirect(url);
     }
   }
