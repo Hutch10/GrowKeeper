@@ -1,10 +1,17 @@
 "use client";
 
+import React, { useEffect, useState } from "react";
 import { useTheme } from "@/components/providers/theme-provider";
-import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Sun, 
+  Moon, 
+  Zap, 
+  Cloud
+} from "lucide-react";
 
 export function ThemeToggle() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -13,45 +20,62 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <div className="h-9 w-9 rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800" />
+      <div className="h-10 w-10 rounded-xl bg-white/5 border border-white/5 animate-pulse" />
     );
   }
 
+  const themes: { id: typeof theme; icon: React.ElementType; color: string; label: string }[] = [
+    { id: "dark", icon: Moon, color: "text-blue-400", label: "Midnight" },
+    { id: "light", icon: Sun, color: "text-amber-400", label: "Solaris" },
+    { id: "neon", icon: Zap, color: "text-emerald-400", label: "Neon" },
+    { id: "mist", icon: Cloud, color: "text-indigo-400", label: "Mist" },
+  ];
+
+  const currentThemeInfo = themes.find(t => t.id === theme) || themes[0];
+
   const cycleTheme = () => {
-    if (theme === "light") setTheme("dark");
-    else if (theme === "dark") setTheme("system");
-    else setTheme("light");
+    const currentIndex = themes.findIndex(t => t.id === theme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    setTheme(themes[nextIndex].id);
   };
 
   return (
-    <button
-      onClick={cycleTheme}
-      className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-      title={`Theme: ${theme}`}
-    >
-      {resolvedTheme === "dark" ? (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          className="h-5 w-5"
-        >
-          <path
-            fillRule="evenodd"
-            d="M7.455 2.004a.75.75 0 01.26.77 7 7 0 009.958 7.967.75.75 0 011.067.853A8.5 8.5 0 116.647 1.921a.75.75 0 01.808.083z"
-            clipRule="evenodd"
-          />
-        </svg>
-      ) : (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          className="h-5 w-5"
-        >
-          <path d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 5.404a.75.75 0 10-1.06-1.06l-1.061 1.06a.75.75 0 001.06 1.061l1.06-1.06zM6.464 14.596a.75.75 0 10-1.06-1.06l-1.06 1.06a.75.75 0 001.06 1.06l1.06-1.06zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 15.657a.75.75 0 001.06-1.06l-1.06-1.061a.75.75 0 10-1.06 1.06l1.06 1.06zM5.404 6.464a.75.75 0 001.06-1.06l-1.06-1.06a.75.75 0 10-1.061 1.06l1.06 1.06z" />
-        </svg>
-      )}
-    </button>
+    <div className="flex items-center gap-2">
+      <button
+        onClick={cycleTheme}
+        className="group relative flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all active:scale-95 shadow-2xl overflow-hidden backdrop-blur-xl"
+        title={`Active Protocol: ${currentThemeInfo.label}`}
+      >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={theme}
+            initial={{ y: 20, opacity: 0, rotate: -45 }}
+            animate={{ y: 0, opacity: 1, rotate: 0 }}
+            exit={{ y: -20, opacity: 0, rotate: 45 }}
+            transition={{ type: "spring", damping: 20, stiffness: 300 }}
+            className={`relative z-10 ${currentThemeInfo.color}`}
+          >
+            {React.createElement(currentThemeInfo.icon, { size: 18, strokeWidth: 2 })}
+          </motion.div>
+        </AnimatePresence>
+        
+        {/* Subtle indicator glow */}
+        <motion.div 
+          layoutId="theme-glow"
+          className={`absolute inset-0 opacity-20 blur-xl ${currentThemeInfo.color.replace('text-', 'bg-')}`}
+        />
+        
+        {/* Scan line effect on hover */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-500">
+          <div className="h-[2px] w-full bg-white/40 absolute top-0 animate-scan" />
+        </div>
+      </button>
+
+      {/* Hidden label for larger viewports or accessibility */}
+      <div className="hidden lg:block">
+        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 mb-0.5">Surface Mode</div>
+        <div className="text-[11px] font-bold text-white/40 leading-none">{currentThemeInfo.label}</div>
+      </div>
+    </div>
   );
 }

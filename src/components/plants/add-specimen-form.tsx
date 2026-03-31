@@ -2,7 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Leaf, Droplets, MapPin, Sun, ArrowRight, ArrowLeft, Check, Waves, Flower2, Heart } from "lucide-react";
+import { 
+  Camera, 
+  Leaf, 
+  Droplets, 
+  MapPin, 
+  Sun, 
+  ArrowRight, 
+  ArrowLeft, 
+  Check, 
+  Waves, 
+  Flower2, 
+  Heart, 
+  ShieldCheck, 
+  Activity,
+  X
+} from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useSpecimenData } from "@/hooks/use-specimen-data";
@@ -33,6 +48,10 @@ interface AddSpecimenFormProps {
   onClose?: () => void;
 }
 
+/**
+ * GrowKeeper Specimen Onboarding Wizard (Phase 10)
+ * Refined for Industrial Intelligence standards with multi-phase transitions.
+ */
 export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
   const router = useRouter();
   const { addSpecimen } = useSpecimenData();
@@ -49,10 +68,10 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // Care fields (shared or kingdom-specific)
-  const [watering, setWatering] = useState(""); // Plant: Water, Fungi: Misting
-  const [light, setLight] = useState(""); // Plant specific
-  const [fertilizer, setFertilizer] = useState(""); // Shared
-  const [substrate, setSubstrate] = useState(""); // Fungi specific
+  const [watering, setWatering] = useState(""); 
+  const [light, setLight] = useState(""); 
+  const [fertilizer, setFertilizer] = useState(""); 
+  const [substrate, setSubstrate] = useState(""); 
   
   // Animalia specific
   const [heartRate, setHeartRate] = useState<number | "">(""); 
@@ -64,10 +83,6 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
   const [lon, setLon] = useState<number | null>(null);
   const [isLocating, setIsLocating] = useState(false);
 
-  // Determine if we are in modal or static mode
-  const isModal = isOpen !== undefined;
-  
-  // If isOpen is explicitly false, don't render
   if (isOpen === false) return null;
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,7 +114,7 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
       (error) => {
         setIsLocating(false);
         console.error("Error capturing location:", error);
-        toast.error("Failed to capture GPS coordinates. Please ensure location permissions are enabled.");
+        toast.error("Failed to capture GPS coordinates.");
       },
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
@@ -125,34 +140,38 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
       return;
     }
 
-    setError(null);
+    const data: Record<string, string | number | null> = {
+      nickname: nickname.trim(),
+      species_name: speciesName.trim(),
+      notes: notes.trim(),
+      location,
+      kingdom,
+    };
+
+    if (kingdom === "Plantae") {
+      data.light = light;
+      data.watering = watering;
+    } else if (kingdom === "Fungi") {
+      data.substrate = substrate;
+      data.misting_schedule = watering;
+    } else if (kingdom === "Animalia") {
+      if (heartRate !== "") data.heart_rate = heartRate;
+      if (activityLevel !== "") data.activity_level = activityLevel;
+      data.dietary_notes = dietaryNotes.trim();
+    }
+    
+    if (lat !== null) data.lat = lat;
+    if (lon !== null) data.lon = lon;
 
     try {
       const formData = new FormData();
-      formData.append("nickname", nickname.trim());
-      formData.append("species_name", speciesName.trim());
-      formData.append("notes", notes.trim());
-      formData.append("location", location);
-      formData.append("kingdom", kingdom);
-      
-      if (kingdom === "Plantae") {
-        formData.append("light", light);
-        formData.append("watering", watering);
-      } else if (kingdom === "Fungi") {
-        formData.append("substrate", substrate);
-        formData.append("misting_schedule", watering);
-      } else if (kingdom === "Animalia") {
-        if (heartRate !== "") formData.append("heart_rate", String(heartRate));
-        if (activityLevel !== "") formData.append("activity_level", String(activityLevel));
-        formData.append("dietary_notes", dietaryNotes.trim());
-      }
-      
-      if (lat !== null) formData.append("lat", String(lat));
-      if (lon !== null) formData.append("lon", String(lon));
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          formData.append(key, String(value));
+        }
+      });
 
-      if (image) {
-        formData.append("file", image);
-      }
+      if (image) formData.append("file", image);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await performAdd(formData as any);
@@ -162,14 +181,10 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
         onClose?.();
         router.refresh();
       } else {
-        const msg = result.error || "Failed to add specimen.";
-        setError(msg);
-        toast.error(msg);
+        setError(result.error || "Failed to add specimen.");
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
-      setError(msg);
-      toast.error(msg);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     }
   };
 
@@ -177,121 +192,85 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
     switch (STEPS[currentStep].id) {
       case "kingdom":
         return (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-            <div className="text-center space-y-2">
-              <h3 className="text-2xl font-black text-brand-dark">Choose Your Path</h3>
-              <p className="text-brand-dark/40 font-bold">Select the kingdom of your new specimen.</p>
+          <div className="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500">
+            <div className="text-center space-y-4">
+              <h3 className="text-5xl font-black text-slate-800 dark:text-white tracking-tighter uppercase mb-2">Choose Your Path</h3>
+              <p className="text-xl font-bold text-slate-400 dark:text-white/20">Select the kingdom of your new specimen.</p>
             </div>
-            <div className="grid grid-cols-2 gap-6">
-              <button
-                type="button"
-                onClick={() => { setKingdom("Plantae"); handleNext(); }}
-                className={`p-8 rounded-[3rem] border-4 transition-all flex flex-col items-center gap-4 group ${
-                  kingdom === "Plantae" 
-                    ? "border-brand-green bg-brand-green/5 scale-105 shadow-2xl shadow-brand-green/10" 
-                    : "border-brand-pink/20 bg-white hover:border-brand-green/40 hover:scale-102"
-                }`}
-              >
-                <div className={`p-6 rounded-[2rem] transition-colors ${kingdom === "Plantae" ? "bg-brand-green text-white" : "bg-brand-pink/10 text-brand-green"}`}>
-                  <Leaf className="w-12 h-12" />
-                </div>
-                <div>
-                  <span className="block font-black text-xl text-brand-dark">Botanical</span>
-                  <span className="text-[10px] font-bold text-brand-dark/30 uppercase tracking-widest">Plants & Flowers</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => { setKingdom("Fungi"); handleNext(); }}
-                className={`p-8 rounded-[3rem] border-4 transition-all flex flex-col items-center gap-4 group ${
-                  kingdom === "Fungi" 
-                    ? "border-brand-green bg-brand-green/5 scale-105 shadow-2xl shadow-brand-green/10" 
-                    : "border-brand-pink/20 bg-white hover:border-brand-green/40 hover:scale-102"
-                }`}
-              >
-                <div className={`p-6 rounded-[2rem] transition-colors ${kingdom === "Fungi" ? "bg-brand-green text-white" : "bg-brand-pink/10 text-brand-green"}`}>
-                  <Flower2 className="w-12 h-12" />
-                </div>
-                <div>
-                  <span className="block font-black text-xl text-brand-dark">Mycology</span>
-                  <span className="text-[10px] font-bold text-brand-dark/30 uppercase tracking-widest">Mushrooms & Fungi</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => { setKingdom("Animalia"); handleNext(); }}
-                className={`p-8 rounded-[3rem] border-4 transition-all flex flex-col items-center gap-4 group col-span-2 ${
-                  kingdom === "Animalia" 
-                    ? "border-brand-green bg-brand-green/5 scale-105 shadow-2xl shadow-brand-green/10" 
-                    : "border-brand-pink/20 bg-white hover:border-brand-green/40 hover:scale-102"
-                }`}
-              >
-                <div className={`p-6 rounded-[2rem] transition-colors ${kingdom === "Animalia" ? "bg-brand-green text-white" : "bg-brand-pink/10 text-brand-green"}`}>
-                  <Heart className="w-12 h-12" />
-                </div>
-                <div>
-                  <span className="block font-black text-xl text-brand-dark">Animalia</span>
-                  <span className="text-[10px] font-bold text-brand-dark/30 uppercase tracking-widest">Fauna & Wildlife</span>
-                </div>
-              </button>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[
+                { id: "Plantae", title: "Botanical", desc: "Plants & Flowers", icon: Leaf, color: "bg-emerald-500 text-black", border: "border-emerald-500/20" },
+                { id: "Fungi", title: "Mycology", desc: "Mushrooms & Fungi", icon: Flower2, color: "bg-amber-400 text-black", border: "border-amber-400/20" },
+                { id: "Animalia", title: "Animalia", desc: "Fauna & Wildlife", icon: Heart, color: "bg-rose-400 text-black", border: "border-rose-400/20" }
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => { setKingdom(item.id as any); handleNext(); }}
+                  className={`relative p-12 rounded-[3.5rem] border-2 transition-all flex flex-col items-center gap-6 group overflow-hidden ${
+                    kingdom === item.id 
+                      ? `${item.border} bg-white dark:bg-white/5 scale-105 shadow-2xl shadow-emerald-500/10` 
+                      : "border-transparent bg-slate-50 dark:bg-white/[0.02] hover:scale-102 hover:bg-white dark:hover:bg-white/5"
+                  }`}
+                >
+                  <div className={`p-8 rounded-[2.5rem] transition-all duration-500 ${kingdom === item.id ? item.color : "bg-slate-200 dark:bg-white/5 text-slate-400 dark:text-white/20 group-hover:scale-110"}`}>
+                    <item.icon className="w-12 h-12" />
+                  </div>
+                  <div className="text-center">
+                    <span className="block font-black text-2xl text-slate-800 dark:text-white uppercase tracking-tighter mb-1">{item.title}</span>
+                    <span className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-[0.2em]">{item.desc}</span>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
         );
 
       case "identity":
         return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-            <div className="flex flex-col items-center gap-6">
+          <div className="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500">
+            <div className="flex flex-col items-center gap-8">
               <div className="relative group" title="Specimen Portrait">
-                <div className={`w-44 h-44 rounded-[3rem] border-4 border-dashed transition-all duration-700 flex flex-col items-center justify-center overflow-hidden bg-brand-pink-light/30 ${
-                  imagePreview ? "border-brand-pink-dark scale-105" : "border-brand-pink/40 group-hover:border-brand-pink-dark group-hover:bg-brand-pink-light/50"
+                <div className={`w-56 h-56 rounded-[4rem] border-2 border-dashed transition-all duration-700 flex flex-col items-center justify-center overflow-hidden bg-slate-50 dark:bg-white/5 ${
+                  imagePreview ? "border-emerald-500 scale-105" : "border-slate-200 dark:border-white/10 group-hover:border-emerald-500/50"
                 }`}>
                   {imagePreview ? (
                     <Image src={imagePreview} alt="Preview" fill unoptimized className="object-cover" />
                   ) : (
-                    <div className="flex flex-col items-center gap-3 text-brand-pink-dark/40 font-black">
-                      <Camera className="w-10 h-10" />
-                      <span className="text-[10px] uppercase tracking-[0.2em]">Add Portrait</span>
+                    <div className="flex flex-col items-center gap-4 text-slate-300 dark:text-white/10 font-black">
+                      <Camera className="w-12 h-12" />
+                      <span className="text-[10px] uppercase tracking-[0.3em]">Add Portrait</span>
                     </div>
                   )}
                   <input type="file" accept="image/*" onChange={onFileChange} className="absolute inset-0 opacity-0 cursor-pointer" aria-label="Upload specimen photo" />
                 </div>
-                  {imagePreview && (
-                    <button 
-                      onClick={() => { setImage(null); setImagePreview(null); }}
-                      className="absolute -top-3 -right-3 bg-brand-pink-dark text-white rounded-2xl p-2 shadow-xl hover:scale-110 active:scale-90 transition-all border-4 border-white"
-                      title="Remove portrait"
-                      aria-label="Remove portrait"
-                    >
-                      <Check className="w-5 h-5 rotate-45" />
-                    </button>
-                  )}
               </div>
               <div className="text-center">
-                <h3 className="text-2xl font-black text-brand-dark mb-1">Meet your {kingdom === "Plantae" ? "Flora" : kingdom === "Fungi" ? "Fungi" : "Companion"}</h3>
-                <p className="text-brand-dark/40 font-bold">Every specimen needs a distinguished name.</p>
+                <h3 className="text-3xl font-black text-slate-800 dark:text-white mb-2 uppercase tracking-tighter">Meet your {kingdom === "Plantae" ? "Flora" : kingdom === "Fungi" ? "Fungi" : "Companion"}</h3>
+                <p className="text-lg font-bold text-slate-400 dark:text-white/20">Every specimen needs a distinguished name.</p>
               </div>
             </div>
 
-            <div className="space-y-5">
-              <div className="group">
-                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-brand-dark/30 mb-2 ml-6">Nickname *</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-12">
+              <div className="space-y-4">
+                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 ml-6">Nickname *</label>
                 <input
                   type="text"
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
                   placeholder="e.g. Sir Moss-a-lot"
-                  className="w-full px-8 py-5 bg-white border-2 border-brand-pink/10 rounded-[2rem] outline-none focus:border-brand-pink-dark focus:ring-8 focus:ring-brand-pink-light/20 transition-all font-bold text-brand-dark"
+                  className="w-full px-8 py-5 bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[2rem] outline-none focus:border-emerald-500/50 transition-all font-bold text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/10 shadow-sm"
                 />
               </div>
-              <div className="group">
-                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-brand-dark/30 mb-2 ml-6">Scientific / Species Name</label>
+              <div className="space-y-4">
+                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 ml-6">Scientific Name</label>
                 <input
                   type="text"
                   value={speciesName}
                   onChange={(e) => setSpeciesName(e.target.value)}
                   placeholder="e.g. Monstera Deliciosa"
-                  className="w-full px-8 py-5 bg-white border-2 border-brand-pink/10 rounded-[2rem] outline-none focus:border-brand-pink-dark focus:ring-8 focus:ring-brand-pink-light/20 transition-all font-bold text-brand-dark"
+                  className="w-full px-8 py-5 bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[2rem] outline-none focus:border-emerald-500/50 transition-all font-bold text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/10 shadow-sm"
                 />
               </div>
             </div>
@@ -300,137 +279,97 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
 
       case "care":
         return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-            <div className="text-center space-y-2">
-              <h3 className="text-2xl font-black text-brand-dark">Protocol & Care</h3>
-              <p className="text-brand-dark/40 font-bold">Parameters for a thrive-first environment.</p>
+          <div className="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500">
+            <div className="text-center space-y-4">
+              <h3 className="text-3xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Protocol & Care</h3>
+              <p className="text-xl font-bold text-slate-400 dark:text-white/20">Parameters for a thrive-first environment.</p>
             </div>
 
-            <div className="space-y-6">
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-brand-dark/30 mb-4 ml-6">
-                  {kingdom === "Plantae" ? "Watering Frequency" : "Misting Frequency"}
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {WATERING_OPTIONS.map(option => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => setWatering(option)}
-                      className={`flex items-center gap-3 px-5 py-4 rounded-[1.5rem] font-bold text-sm transition-all border-2 ${
-                        watering === option 
-                          ? "bg-brand-green border-brand-green text-white shadow-lg shadow-brand-green/20" 
-                          : "bg-white border-brand-pink/10 text-brand-dark hover:border-brand-green/30"
-                      }`}
-                    >
-                      {kingdom === "Plantae" ? <Droplets className="w-4 h-4" /> : <Waves className="w-4 h-4" />}
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {kingdom === "Plantae" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 px-12">
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-brand-dark/30 mb-4 ml-6">Lighting Exposure</label>
-                  <div className="grid gap-3">
-                    {LIGHT_OPTIONS.map(option => (
+                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 mb-6 ml-6">
+                    {kingdom === "Plantae" ? "Watering Frequency" : "Misting Frequency"}
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    {WATERING_OPTIONS.map(option => (
                       <button
                         key={option}
                         type="button"
-                        onClick={() => setLight(option)}
-                        className={`flex items-center gap-4 px-8 py-5 rounded-[1.5rem] font-bold transition-all border-2 ${
-                          light === option 
-                            ? "bg-brand-pink-dark border-brand-pink-dark text-white shadow-lg shadow-brand-pink/20" 
-                            : "bg-white border-brand-pink/10 text-brand-dark hover:border-brand-pink-dark/30"
+                        onClick={() => setWatering(option)}
+                        className={`flex items-center gap-3 px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all border ${
+                          watering === option 
+                            ? "bg-emerald-500 border-emerald-500 text-black shadow-lg shadow-emerald-500/20 scale-105" 
+                            : "bg-white dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-400 hover:border-emerald-500/30"
                         }`}
                       >
-                        <Sun className={`w-5 h-5 ${light === option ? "text-white" : "text-amber-500"}`} />
+                        <Droplets className="w-4 h-4" />
                         {option}
                       </button>
                     ))}
                   </div>
                 </div>
-              ) : (
-                <div className="group">
-                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-brand-dark/30 mb-2 ml-6">Substrate Type</label>
-                  <input
-                    type="text"
-                    value={substrate}
-                    onChange={(e) => setSubstrate(e.target.value)}
-                    placeholder="e.g. Hardwood Sawdust / Oat Bran"
-                    className="w-full px-8 py-5 bg-white border-2 border-brand-pink/10 rounded-[2rem] outline-none focus:border-brand-pink-dark transition-all font-bold text-brand-dark"
-                  />
-                </div>
-              )}
-
-              <div className="group">
-                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-brand-dark/30 mb-2 ml-6">Fertilizer / Supplements (Optional)</label>
-                <input
-                  type="text"
-                  value={fertilizer}
-                  onChange={(e) => setFertilizer(e.target.value)}
-                  placeholder="e.g. Monthly liquid feed"
-                  className="w-full px-8 py-5 bg-white border-2 border-brand-pink/10 rounded-[2rem] outline-none focus:border-brand-pink-dark transition-all font-bold text-brand-dark"
-                />
               </div>
 
-              {kingdom === "Animalia" && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="group">
-                      <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-brand-dark/30 mb-2 ml-6">Target Heart Rate (BPM)</label>
-                      <input
-                        type="number"
-                        value={heartRate}
-                        onChange={(e) => setHeartRate(e.target.value ? parseInt(e.target.value) : "")}
-                        placeholder="e.g. 80"
-                        className="w-full px-8 py-5 bg-white border-2 border-brand-pink/10 rounded-[2rem] outline-none focus:border-brand-pink-dark transition-all font-bold text-brand-dark"
-                      />
-                    </div>
-                    <div className="group">
-                      <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-brand-dark/30 mb-2 ml-6">Daily Activity Target (%)</label>
-                      <input
-                        type="number"
-                        value={activityLevel}
-                        onChange={(e) => setActivityLevel(e.target.value ? parseInt(e.target.value) : "")}
-                        placeholder="e.g. 100"
-                        className="w-full px-8 py-5 bg-white border-2 border-brand-pink/10 rounded-[2rem] outline-none focus:border-brand-pink-dark transition-all font-bold text-brand-dark"
-                      />
+              <div className="space-y-8">
+                {kingdom === "Plantae" ? (
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 mb-6 ml-6">Lighting Exposure</label>
+                    <div className="space-y-3">
+                      {LIGHT_OPTIONS.map(option => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => setLight(option)}
+                          className={`w-full flex items-center justify-between px-8 py-5 rounded-[2rem] font-black uppercase tracking-widest text-[10px] transition-all border ${
+                            light === option 
+                              ? "bg-amber-400 border-amber-400 text-black shadow-lg" 
+                              : "bg-white dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-400 hover:border-amber-400/30"
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <Sun className="w-5 h-5" />
+                            {option}
+                          </div>
+                          {light === option && <Check className="w-4 h-4" />}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                  <div className="group">
-                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-brand-dark/30 mb-2 ml-6">Dietary Notes / Schedule</label>
-                    <textarea
-                      value={dietaryNotes}
-                      onChange={(e) => setDietaryNotes(e.target.value)}
-                      placeholder="e.g. High-protein, grain-free. Feeding at 08h and 19h."
-                      className="w-full px-8 py-5 border-2 border-brand-pink/10 rounded-[2rem] outline-none focus:border-brand-pink-dark focus:ring-8 focus:ring-brand-pink-light/20 transition-all font-bold text-brand-dark resize-none h-32"
+                ) : (
+                  <div className="space-y-4">
+                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 ml-6">Substrate Type</label>
+                    <input
+                      type="text"
+                      value={substrate}
+                      onChange={(e) => setSubstrate(e.target.value)}
+                      placeholder="e.g. Hardwood Sawdust / Oat Bran"
+                      className="w-full px-8 py-5 bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[2rem] font-bold text-slate-800 dark:text-white outline-none focus:border-emerald-500/50"
                     />
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         );
 
       case "location":
         return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-            <div className="text-center space-y-2">
-              <h3 className="text-2xl font-black text-brand-dark">Sanctuary Location</h3>
-              <p className="text-brand-dark/40 font-bold">Deployment zone within your habitat.</p>
+          <div className="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500 px-12">
+            <div className="text-center space-y-4">
+              <h3 className="text-3xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Sanctuary Location</h3>
+              <p className="text-xl font-bold text-slate-400 dark:text-white/20">Deployment zone within your habitat.</p>
             </div>
 
-            <div className="bg-brand-pink/5 border-2 border-brand-pink/10 rounded-[2rem] p-6 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className={`p-4 rounded-2xl transition-colors ${lat ? "bg-emerald-500 text-black" : "bg-brand-pink/10 text-brand-pink-dark"}`}>
-                  <MapPin className="w-6 h-6" />
+            <div className="bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/5 rounded-[3rem] p-10 flex items-center justify-between shadow-inner">
+              <div className="flex items-center gap-6">
+                <div className={`p-6 rounded-[2rem] transition-all duration-700 ${lat ? "bg-emerald-500 text-black shadow-2xl shadow-emerald-500/20" : "bg-white/10 text-slate-400"}`}>
+                  <MapPin className="w-8 h-8" />
                 </div>
                 <div>
-                  <span className="block text-[10px] font-black uppercase tracking-widest text-brand-dark/30">GPS Anchoring</span>
-                  <p className="font-extrabold text-brand-dark">
-                    {isLocating ? "Acquiring Signal..." : lat && lon ? `${lat.toFixed(4)}, ${lon.toFixed(4)}` : "No GPS signal captured"}
+                  <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 mb-1">GPS Anchoring</span>
+                  <p className="text-2xl font-black text-slate-800 dark:text-white tracking-tighter">
+                    {isLocating ? "Acquiring Signal..." : lat && lon ? `${lat.toFixed(6)}, ${lon.toFixed(6)}` : "No GPS signal captured"}
                   </p>
                 </div>
               </div>
@@ -438,27 +377,27 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
                 type="button"
                 onClick={captureLocation}
                 disabled={isLocating}
-                className={`px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
-                  isLocating ? "bg-white/50 text-brand-dark/20 cursor-not-allowed" : "bg-brand-pink-dark text-white hover:scale-105 active:scale-95 shadow-xl shadow-brand-pink/20"
+                className={`px-10 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${
+                  isLocating ? "opacity-50 cursor-not-allowed" : "bg-black text-white hover:scale-105 active:scale-95 shadow-xl"
                 }`}
               >
                 {isLocating ? "Locating..." : lat ? "Recapture" : "Capture Location"}
               </button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {ROOM_OPTIONS.map(room => (
                 <button
                   key={room}
                   type="button"
                   onClick={() => setLocation(room)}
-                  className={`px-4 py-6 rounded-[2rem] font-black text-[10px] uppercase tracking-widest transition-all border-2 flex flex-col items-center gap-3 ${
+                  className={`px-6 py-8 rounded-[2.5rem] font-black text-[10px] uppercase tracking-[0.2em] transition-all border flex flex-col items-center gap-4 ${
                     location === room 
-                      ? "bg-brand-dark border-brand-dark text-white shadow-xl scale-105" 
-                      : "bg-white border-brand-pink/10 text-brand-dark/40 hover:border-brand-dark/30"
+                      ? "bg-slate-800 dark:bg-white border-slate-800 dark:border-white text-white dark:text-black scale-105 shadow-2xl" 
+                      : "bg-white dark:bg-white/5 border-slate-100 dark:border-white/5 text-slate-400 hover:border-slate-800/20"
                   }`}
                 >
-                  <MapPin className="w-5 h-5 opacity-40" />
+                  <MapPin className="w-6 h-6 opacity-40 shrink-0" />
                   {room}
                 </button>
               ))}
@@ -468,44 +407,43 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
 
       case "confirm":
         return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 text-center">
-            <div className="relative w-48 h-48 mx-auto rounded-[3rem] overflow-hidden border-8 border-white shadow-2xl scale-110 mb-12">
+          <div className="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500 text-center px-12">
+            <div className="relative w-64 h-64 mx-auto rounded-[4rem] overflow-hidden border-[12px] border-white dark:border-white/5 shadow-2xl scale-110 mb-12">
               {imagePreview ? (
                 <Image src={imagePreview} alt={nickname} fill unoptimized className="object-cover" />
               ) : (
-                <div className="w-full h-full bg-brand-pink-light/30 flex items-center justify-center">
-                  {kingdom === "Plantae" ? <Leaf className="w-16 h-16 text-brand-green" /> : <Flower2 className="w-16 h-16 text-brand-green" />}
+                <div className="w-full h-full bg-slate-50 dark:bg-white/5 flex items-center justify-center">
+                   <ShieldCheck className="w-24 h-24 text-emerald-500/20" />
                 </div>
               )}
             </div>
+            
             <div className="space-y-2">
-              <h3 className="text-4xl font-black text-brand-dark uppercase tracking-tighter">{nickname}</h3>
-              <p className="text-brand-green font-black uppercase text-xs tracking-[0.3em]">{speciesName || "New Lifeform"}</p>
+              <h3 className="text-5xl font-black text-slate-800 dark:text-white uppercase tracking-tighter leading-none">{nickname}</h3>
+              <p className="text-emerald-500 font-black uppercase text-xs tracking-[0.4em]">{speciesName || "New Biological Asset"}</p>
             </div>
             
-            <div className="bg-white/50 border border-brand-pink/20 rounded-[2.5rem] p-8 grid grid-cols-2 gap-8 text-left shadow-inner">
+            <div className="bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 rounded-[3.5rem] p-12 grid grid-cols-2 gap-12 text-left shadow-inner max-w-2xl mx-auto">
               <div className="space-y-1">
-                <span className="text-[9px] font-black text-brand-dark/30 uppercase tracking-widest">Kingdom</span>
-                <p className="font-extrabold text-brand-dark">{kingdom === "Plantae" ? "Botanical" : kingdom === "Fungi" ? "Mycology" : "Animalia"}</p>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Biological Class</span>
+                <p className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tighter">{kingdom === "Plantae" ? "Botanical" : kingdom === "Fungi" ? "Mycology" : "Animalia"}</p>
               </div>
               <div className="space-y-1">
-                <span className="text-[9px] font-black text-brand-dark/30 uppercase tracking-widest">Location</span>
-                <p className="font-extrabold text-brand-dark">{location}</p>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Deployment Zone</span>
+                <p className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tighter">{location}</p>
               </div>
               <div className="space-y-1">
-                <span className="text-[9px] font-black text-brand-dark/30 uppercase tracking-widest">
-                  {kingdom === "Plantae" ? "Light" : kingdom === "Fungi" ? "Substrate" : "Activity Target"}
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                  {kingdom === "Plantae" ? "Solar Cycle" : kingdom === "Fungi" ? "Substrate" : "Activity Target"}
                 </span>
-                <p className="font-extrabold text-brand-dark">
-                  {kingdom === "Plantae" ? (light || "Default") : kingdom === "Fungi" ? (substrate || "Default") : (activityLevel ? `${activityLevel}%` : "Default")}
+                <p className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tighter">
+                  {kingdom === "Plantae" ? (light || "Nominal") : kingdom === "Fungi" ? (substrate || "Standard") : (activityLevel ? `${activityLevel}%` : "Analyzed")}
                 </p>
               </div>
               <div className="space-y-1">
-                <span className="text-[9px] font-black text-brand-dark/30 uppercase tracking-widest">
-                  {kingdom === "Animalia" ? "Heart Rate" : "Care"}
-                </span>
-                <p className="font-extrabold text-brand-dark">
-                  {kingdom === "Animalia" ? (heartRate ? `${heartRate} BPM` : "Analyzed") : (watering || "As needed")}
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Institutional Care</span>
+                <p className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tighter">
+                  {watering || "Adaptive"}
                 </p>
               </div>
             </div>
@@ -513,8 +451,8 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Final notes (optional)..."
-              className="w-full px-8 py-5 bg-white border-2 border-brand-pink/10 rounded-[2rem] outline-none focus:border-brand-pink-dark transition-all font-bold text-brand-dark resize-none h-24"
+              placeholder="Operational notes regarding specimen state..."
+              className="w-full max-w-2xl mx-auto px-10 py-8 bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[2.5rem] outline-none focus:border-emerald-500/30 transition-all font-bold text-slate-800 dark:text-white resize-none h-32 placeholder:text-slate-200"
             />
           </div>
         );
@@ -523,106 +461,94 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
     }
   };
 
-  const formContent = (
-    <div className={`${isModal ? "max-w-3xl w-full max-h-[90vh] overflow-y-auto selection:bg-brand-green/20 tactical-panel border-white/10 p-8 sm:p-12 relative shadow-2xl" : "w-full p-6"} space-y-12`}>
-      {isModal && (
-        <button 
-          onClick={onClose}
-          className="absolute top-6 right-6 p-2 text-white/20 hover:text-white transition-colors"
-          title="Close"
-        >
-          <Check className="w-6 h-6 rotate-45" />
-        </button>
-      )}
-
-      {/* Progress Header */}
-      <div className={`flex justify-between relative mb-8 px-4 ${isModal ? "" : "text-brand-dark"}`}>
-        <div className={`absolute top-6 left-6 right-6 h-[1px] ${isModal ? "bg-white/10" : "bg-brand-dark/10"}`} />
-        <div 
-          className="absolute top-6 left-6 h-[1px] bg-brand-green transition-all duration-700 ease-out" 
-          style={{ width: `${Math.round((currentStep / (STEPS.length - 1)) * 100)}%` }}
-        />
-        {STEPS.map((step, idx) => {
-          const Icon = step.icon;
-          const isActive = idx === currentStep;
-          const isCompleted = idx < currentStep;
-          
-          return (
-            <div key={step.id} className="relative z-10 flex flex-col items-center gap-3">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 border ${
-                isActive 
-                  ? "bg-brand-green text-black scale-110 shadow-[0_0_20px_rgba(52,211,153,0.3)]" 
-                  : isCompleted 
-                    ? "bg-brand-green/20 border-brand-green text-brand-green" 
-                    : isModal ? "bg-white/5 text-white/20 border-white/10" : "bg-brand-dark/5 text-brand-dark/20 border-brand-dark/10"
-              }`}>
-                {isCompleted ? <Check className="w-5 h-5 stroke-[3]" /> : <Icon className="w-5 h-5" />}
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-black/80 backdrop-blur-2xl animate-in fade-in duration-500">
+      <div className="max-w-6xl w-full h-[90vh] bg-white dark:bg-[#050505] rounded-[4rem] border border-white/5 overflow-hidden flex flex-col shadow-[0_0_100px_rgba(0,0,0,0.5)] relative">
+        {/* Header Progress */}
+        <div className="px-16 py-12 flex justify-between relative bg-slate-50/50 dark:bg-white/[0.01] border-b border-white/5">
+          <div className="absolute bottom-[-1px] left-16 right-16 h-[2px] bg-slate-200 dark:bg-white/5" />
+          <div 
+            className="absolute bottom-[-1px] left-16 h-[2px] bg-emerald-500 transition-all duration-1000 ease-in-out shadow-[0_0_15px_rgba(16,185,129,0.5)]" 
+            style={{ width: `calc(${Math.round((currentStep / (STEPS.length - 1)) * 100)}% - 8rem)` }}
+          />
+          {STEPS.map((step, idx) => {
+            const Icon = step.icon;
+            const isActive = idx === currentStep;
+            const isCompleted = idx < currentStep;
+            
+            return (
+              <div key={step.id} className="relative z-10 flex flex-col items-center gap-4">
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500 border-2 ${
+                  isActive 
+                    ? "bg-emerald-500 border-emerald-500 text-black scale-110 shadow-2xl shadow-emerald-500/20" 
+                    : isCompleted 
+                      ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" 
+                      : "bg-white dark:bg-white/5 border-slate-100 dark:border-white/5 text-slate-300 dark:text-white/10"
+                }`}>
+                  {isCompleted ? <Check className="w-6 h-6 stroke-[3]" /> : <Icon className="w-6 h-6" />}
+                </div>
+                <span className={`text-[10px] font-black uppercase tracking-[0.3em] transition-colors duration-500 ${
+                  isActive ? "text-emerald-500" : "text-slate-300 dark:text-white/10"
+                }`}>
+                  {step.title}
+                </span>
               </div>
-              <span className={`text-[8px] font-black uppercase tracking-[0.2em] transition-colors duration-500 ${
-                isActive ? "text-brand-green" : isModal ? "text-white/20" : "text-brand-dark/20"
-              }`}>
-                {step.title}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {error && (
-        <div className="p-5 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 animate-in zoom-in-95 duration-300">
-           <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-           {error}
+            );
+          })}
         </div>
-      )}
 
-      {renderStep()}
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-16">
+          {error && (
+            <div className="mb-12 p-6 bg-red-500/10 border border-red-500/20 rounded-3xl text-red-500 text-[11px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-4 animate-in zoom-in-95 duration-500">
+               <Activity className="w-4 h-4 animate-pulse" />
+               {error}
+            </div>
+          )}
+          {renderStep()}
+        </div>
 
-      <div className={`pt-12 border-t flex items-center justify-between ${isModal ? "border-white/5" : "border-brand-dark/5"}`}>
-        <button
-          type="button"
-          onClick={currentStep === 0 ? onClose : handleBack}
-          className={`group flex items-center gap-3 px-8 py-4 rounded-xl font-black transition-all active:scale-95 ${
-            isModal ? "text-white/30 hover:text-white" : "text-brand-dark/30 hover:text-brand-dark"
-          }`}
-        >
-          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-          <span className="text-[10px] uppercase tracking-widest">{currentStep === 0 ? "Abort" : "Previous"}</span>
-        </button>
-
-        {currentStep < STEPS.length - 1 ? (
+        {/* Footer Actions */}
+        <div className="px-16 py-12 border-t border-white/5 flex items-center justify-between bg-white/50 dark:bg-transparent backdrop-blur-md">
           <button
             type="button"
-            onClick={handleNext}
-            className={`group flex items-center gap-4 px-10 py-4 rounded-xl font-black border transition-all ${
-              isModal 
-                ? "bg-white/10 text-white border-white/10 hover:bg-white/20 hover:scale-105" 
-                : "bg-brand-dark/10 text-brand-dark border-brand-dark/10 hover:bg-brand-dark/20 hover:scale-105"
-            }`}
+            onClick={currentStep === 0 ? onClose : handleBack}
+            className="group flex items-center gap-6 px-10 py-5 rounded-2xl font-black transition-all hover:bg-slate-50 dark:hover:bg-white/5 text-slate-400 dark:text-white/20"
           >
-            <span className="text-[10px] uppercase tracking-widest">Next Phase</span>
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-2" />
+            <span className="text-[11px] uppercase tracking-[0.4em] mb-[-2px]">{currentStep === 0 ? "Abort" : "Previous Phase"}</span>
           </button>
-        ) : (
-          <button
-            onClick={handleSubmit}
-            disabled={isPending}
-            className="flex items-center gap-4 px-12 py-4 bg-brand-green text-black rounded-xl font-black shadow-2xl shadow-brand-green/20 hover:bg-white hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
-          >
-            <span className="text-[10px] uppercase tracking-widest">{isPending ? "Integrating Lifeform..." : "Commence Governance"}</span>
-            <Check className="w-5 h-5 stroke-[3]" />
-          </button>
-        )}
+
+          {currentStep < STEPS.length - 1 ? (
+            <button
+              type="button"
+              onClick={handleNext}
+              className="group flex items-center gap-6 px-12 py-5 bg-black text-white rounded-2xl font-black shadow-2xl transition-all hover:scale-105 active:scale-95"
+            >
+              <span className="text-[11px] uppercase tracking-[0.4em] mb-[-2px]">Next Phase</span>
+              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-2" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={isPending}
+              className="flex items-center gap-6 px-16 py-5 bg-emerald-500 text-black rounded-2xl font-black shadow-[0_20px_40px_rgba(16,185,129,0.3)] hover:scale-105 active:scale-95 transition-all disabled:opacity-50 border border-emerald-400"
+            >
+              <span className="text-[11px] uppercase tracking-[0.4em] mb-[-2px]">{isPending ? "Integrating Lifeform..." : "Commence Governance"}</span>
+              <ShieldCheck className="w-6 h-6" />
+            </button>
+          )}
+        </div>
+        
+        {/* Close Interaction */}
+        <button 
+          onClick={onClose}
+          title="Exit Wizard"
+          className="absolute top-8 right-8 p-4 text-slate-300 dark:text-white/10 hover:text-red-500 transition-colors bg-white/5 hover:bg-red-500/10 rounded-2xl border border-white/5"
+        >
+          <X className="w-6 h-6" />
+        </button>
       </div>
     </div>
   );
-
-  if (isModal) {
-    return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-xl animate-in fade-in duration-300">
-        {formContent}
-      </div>
-    );
-  }
-
-  return formContent;
 }

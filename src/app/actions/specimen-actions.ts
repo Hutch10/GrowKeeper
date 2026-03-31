@@ -7,10 +7,9 @@ import { getAuthenticatedUser } from "@/lib/auth-server";
 import { createClient } from "@/lib/supabase-server";
 import { checkMutationGuard } from "@/lib/mutation-utility";
 import { trackAlphaEvent } from "@/lib/services/alpha-telemetry";
+import { recordAuditEntry } from "@/lib/services/audit-ledger";
 import { normalizeActionError } from "@/lib/error-normalization";
-
-// Simple in-memory storage for Guest Mode session persistence
-// Removed shared-memory guest mode imports for strict auth enforcement
+import { getUserRole } from "@/lib/services/permissions";
 
 import { RAIS_CONSTITUTION } from "@/lib/rais-constitution";
 import {
@@ -22,9 +21,6 @@ import { type Kingdom } from "@/types/specimen";
 
 
 export type UpdateSpecimenInput = BaseUpdateInput & { image?: FormData };
-
-
-
 
 export async function addSpecimen(formData: FormData): Promise<ActionResult<SpecimenRow>> {
   const auth = await getAuthenticatedUser();
@@ -139,6 +135,20 @@ export async function addSpecimen(formData: FormData): Promise<ActionResult<Spec
       }
       return { success: false, data: null, error: normalizeActionError(dbError).message };
     }
+
+    // Phase 3: Audit Ledger anchoring
+    const s = specimen as SpecimenRow;
+    await recordAuditEntry({
+      action: "CREATE",
+      target: "specimen",
+      targetId: s.id,
+      metadata: { 
+        nickname: s.nickname,
+        species: s.species_name,
+        compliance: s.compliance_status
+      },
+      payload: specimen
+    });
 
     revalidatePath("/dashboard");
     revalidatePath("/");
@@ -277,11 +287,18 @@ export async function updateSpecimen(data: UpdateSpecimenInput): Promise<ActionR
   payload.compliance_status = raisResult.status;
 
   try {
-    const { data: specimen, error } = await supabase
+    const role = await getUserRole(auth.data.id);
+    const query = supabase
       .from("specimens")
       .update(payload)
-      .eq("id", data.id)
-      .eq("user_id", auth.data.id)
+      .eq("id", data.id);
+
+    // Hardened RBAC: Only Owners or Admins can update
+    if (role === 'USER') {
+      query.eq("user_id", auth.data.id);
+    }
+
+    const { data: specimen, error } = await query
       .select()
       .maybeSingle();
 
@@ -296,8 +313,33 @@ export async function updateSpecimen(data: UpdateSpecimenInput): Promise<ActionR
     }
 
     if (!specimen) {
-      return { success: false, data: null, error: "Specimen not found or access denied." };
+      // ADVERSARIAL MITIGATION LOGGING
+      await recordAuditEntry({
+        action: "ADVERSARIAL_ATTEMPT",
+        target: "specimen",
+        targetId: data.id,
+        metadata: { 
+          threat_type: "UNAUTHORIZED_UPDATE_ATTEMPT",
+          actor_role: role,
+          outcome: "NEUTRALIZED"
+        }
+      });
+      return { success: false, data: null, error: "Access Denied: Mutation Neutralized." };
     }
+
+    const s = specimen as SpecimenRow;
+
+    // Phase 3: Audit Ledger anchoring
+    await recordAuditEntry({
+      action: "UPDATE",
+      target: "specimen",
+      targetId: s.id,
+      metadata: { 
+        nickname: s.nickname,
+        compliance: s.compliance_status
+      },
+      payload: specimen
+    });
 
     revalidatePath("/plants");
     revalidatePath(`/plants/${data.id}`);
@@ -322,15 +364,57 @@ export async function deleteSpecimen(id: string): Promise<ActionResult<null>> {
   const supabase = createClient();
 
   try {
-    const { error } = await supabase
+    const role = await getUserRole(auth.data.id);
+    
+    // Explicit Identity Gate
+    if (role === 'USER') {
+      // Check ownership first for users to return better error
+      const { data: ownerCheck } = await supabase
+        .from('specimens')
+        .select('user_id')
+        .eq('id', id)
+        .single();
+        
+      if (ownerCheck && ownerCheck.user_id !== auth.data.id) {
+         // ADVERSARIAL MITIGATION LOGGING
+         await recordAuditEntry({
+           action: "ADVERSARIAL_ATTEMPT",
+           target: "specimen",
+           targetId: id,
+           metadata: { 
+             threat_type: "UNAUTHORIZED_DELETE_ATTEMPT",
+             actor_role: role,
+             outcome: "NEUTRALIZED"
+           }
+         });
+         return { success: false, data: null, error: "Security Breach Prevented: Mutation Blocked." };
+      }
+    }
+
+    const query = supabase
       .from("specimens")
       .delete()
-      .eq("id", id)
-      .eq("user_id", auth.data.id);
+      .eq("id", id);
+
+    if (role === 'USER') {
+      query.eq("user_id", auth.data.id);
+    }
+
+    const { error } = await query;
 
     if (error) {
       return { success: false, data: null, error: normalizeActionError(error).message };
     }
+
+    // Phase 3: Audit Ledger anchoring
+    await recordAuditEntry({
+      action: "DELETE",
+      target: "specimen",
+      targetId: id,
+      metadata: { 
+        reason: "Manual operator deletion"
+      }
+    });
 
     revalidatePath("/plants");
     revalidatePath("/dashboard");

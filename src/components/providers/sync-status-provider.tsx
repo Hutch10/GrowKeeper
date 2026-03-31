@@ -1,8 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { toast } from "sonner";
 
-export type SyncStatus = "idle" | "pending" | "error";
+export type SyncStatus = "idle" | "pending" | "error" | "syncing";
 
 interface SyncStatusContextType {
   status: SyncStatus;
@@ -16,6 +17,31 @@ const SyncStatusContext = createContext<SyncStatusContextType | undefined>(undef
 export function SyncStatusProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SyncStatus>("idle");
   const [lastError, setLastError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Initialize Operation Queue Sync
+    const initSync = async () => {
+      const { operationQueue } = await import("@/lib/services/operation-queue");
+      
+      // Initial process if online
+      if (navigator.onLine) {
+        operationQueue.processQueue();
+      }
+
+      const handleOnline = () => {
+        toast.success("Network connection restored. Syncing field operations...");
+        operationQueue.processQueue();
+      };
+
+      window.addEventListener('online', handleOnline);
+      return () => window.removeEventListener('online', handleOnline);
+    };
+
+    const cleanupPromise = initSync();
+    return () => {
+      cleanupPromise.then(cleanup => cleanup && cleanup());
+    };
+  }, []);
 
   return (
     <SyncStatusContext.Provider value={{ status, setStatus, lastError, setLastError }}>

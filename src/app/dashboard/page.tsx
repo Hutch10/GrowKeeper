@@ -19,6 +19,7 @@ async function DashboardRegistry() {
     <CommandCenter 
       initialSpecimens={specimens || []} 
       initialTasks={tasks || []} 
+      errorMessage={(!specimenResult.success || !taskResult.success) ? (specimenResult.error || taskResult.error) : undefined}
     />
   );
 }

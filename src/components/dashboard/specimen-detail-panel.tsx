@@ -38,6 +38,21 @@ import type { SpecimenRow } from "@/app/actions/types";
 import { IntelligenceMeshPanel } from "./intelligence-mesh-panel";
 import { healthForecastService, type HealthForecast } from "@/lib/services/health-forecast-service";
 import { NeuralForecastGraph } from "./neural-forecast-graph";
+import { DiagnosticConfidenceIndicator } from "./diagnostic-confidence-indicator";
+import { getPendingProposals, acceptAgentProposal, type AgentProposal } from "@/app/actions/proposals";
+import { deriveSpecimenState, type ProjectedState } from "@/lib/services/biological-engine";
+import { CheckCircle2, XCircle } from "lucide-react";
+
+// Type alias to satisfy legacy service requirements while maintaining hardening
+type SpecimenIntelligenceRecord = SpecimenRow & {
+  light?: string | null;
+  watering?: string | null;
+  fertilizer?: string | null;
+  happiness_score?: number | null;
+  lat?: number | null;
+  lon?: number | null;
+  region?: string | null;
+};
 
 interface SpecimenDetailPanelProps {
   className?: string;
@@ -45,9 +60,30 @@ interface SpecimenDetailPanelProps {
   onDelete?: (id: string) => void;
   onEdit?: (specimen: SpecimenRow) => void;
   onClose?: () => void;
+  onOpenCompliance?: (specimen: SpecimenRow) => void;
 }
 
-export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanelProps) {
+// Kingdom-specific type extensions for structural hardening
+interface ExtendedPlant extends SpecimenIntelligenceRecord {
+  light?: string;
+  watering?: string;
+}
+
+interface ExtendedFungi extends SpecimenIntelligenceRecord {
+  substrate?: string;
+  misting_schedule?: string;
+}
+
+interface ExtendedAnimalia extends SpecimenIntelligenceRecord {
+  activity_level?: number;
+  dietary_notes?: string;
+}
+
+/**
+ * GrowKeeper Specimen Detail Panel (Block 3 Completion)
+ * Refined for Industrial Hardening - Strictly typed & warning-free.
+ */
+export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompliance }: SpecimenDetailPanelProps) {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [forecast, setForecast] = useState<ForecastResult | null>(null);
   const [risk, setRisk] = useState<RiskAnalysis | null>(null);
@@ -57,13 +93,24 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
   const [meshNodes, setMeshNodes] = useState<IntelligenceMeshNode[]>([]);
   const [careProtocol, setCareProtocol] = useState<CareProtocol | null>(null);
   const [healthForecast, setHealthForecast] = useState<HealthForecast | null>(null);
+  const [proposals, setProposals] = useState<AgentProposal[]>([]);
+  const [projectedState, setProjectedState] = useState<ProjectedState | null>(null);
 
   useEffect(() => {
     if (specimen) {
-      forecasting.predictMilestone(specimen).then(setForecast);
-      riskService.assessRisk(specimen).then(setRisk);
+      // Cast for service compatibility
+      const intelSpecimen = specimen as SpecimenIntelligenceRecord;
+      forecasting.predictMilestone(intelSpecimen).then(setForecast);
+      riskService.assessRisk(intelSpecimen).then(setRisk);
       treatmentProtocolService.getSpecimenTasks(specimen.id).then(setTasks); 
       
+      // Fetch Proposals (Phase 5)
+      getPendingProposals(specimen.id).then(setProposals);
+      
+      // Derive State (Phase 1)
+      const state = deriveSpecimenState(specimen, []); 
+      setProjectedState(state);
+
       const forecastData = healthForecastService.generateForecast(
         specimen.id, 
         specimen.health || 85, 
@@ -81,6 +128,8 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
       setRisk(null);
       setTasks([]);
       setHealthForecast(null);
+      setProposals([]);
+      setProjectedState(null);
     }
   }, [specimen]);
 
@@ -108,17 +157,33 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
 
   return (
     <aside className={`w-96 tactical-panel p-6 overflow-y-auto max-h-[calc(100vh-2rem)] border border-white/5 shadow-2xl ${className || ""}`}>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-black text-white uppercase tracking-tighter">Specimen Intelligence</h2>
-        <button className="text-white/20 hover:text-white transition-colors" title="Close">
-          <ChevronDown className="w-6 h-6" />
-        </button>
-      </div>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-black text-white uppercase tracking-tighter leading-none">Specimen Intelligence</h2>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => onOpenCompliance?.(specimen)}
+              className="p-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-xl text-emerald-400 border border-emerald-500/20 transition-all group"
+              title="Audit & Compliance Hub"
+            >
+              <ShieldCheck className="w-4 h-4 group-hover:scale-110" />
+            </button>
+            <button 
+              onClick={onClose}
+              className="text-white/20 hover:text-white transition-colors p-1" 
+              title="Close Panel"
+            >
+              <ChevronDown className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
 
       <div className="relative w-full aspect-[4/3] rounded-[2rem] overflow-hidden mb-4 shadow-md group">
         <Image src={displayImage} alt={specimen.nickname} fill unoptimized className="object-cover transition-transform duration-700 group-hover:scale-110" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-          <button className="w-full py-2 bg-white/20 backdrop-blur-md rounded-xl text-white text-xs font-black uppercase tracking-widest border border-white/20 hover:bg-white/40 transition-all">
+          <button 
+             title="View Gallery"
+             className="w-full py-2 bg-white/20 backdrop-blur-md rounded-xl text-white text-xs font-black uppercase tracking-widest border border-white/20 hover:bg-white/40 transition-all"
+          >
             View Gallery
           </button>
         </div>
@@ -139,14 +204,61 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
           </button>
         </div>
 
+        {/* Diagnostic Confidence Framework (Phase 3) */}
+        {projectedState && (
+          <div className="mb-6">
+            <DiagnosticConfidenceIndicator confidence={projectedState.confidence} label="Stewardship Certainty" />
+          </div>
+        )}
+
+        {/* Intelligence Mesh & Proposals (Phase 5) */}
+        {proposals.length > 0 && (
+          <div className="mb-6 p-4 bg-purple-500/10 border border-purple-500/20 rounded-[1.5rem] animate-in fade-in slide-in-from-top duration-500">
+            <div className="flex items-center gap-2 mb-3">
+              <Bot className="text-purple-400 w-4 h-4" />
+              <h4 className="text-[10px] font-black text-purple-400 uppercase tracking-widest">Specialist Agent Proposals</h4>
+            </div>
+            <div className="space-y-3">
+              {proposals.map(p => (
+                <div key={p.id} className="p-3 bg-white/5 border border-white/5 rounded-xl">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-black text-white uppercase tracking-tighter">{p.action_type}</span>
+                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
+                      p.priority === 'critical' ? 'bg-red-500/20 text-red-400' : 'bg-purple-500/20 text-purple-400'
+                    }`}>
+                      {p.priority}
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-white/50 leading-none mb-2">{p.reasoning}</p>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      title="Authorize Agent Action"
+                      onClick={() => acceptAgentProposal(p.id, "system-user").then(() => getPendingProposals(specimen.id).then(setProposals))}
+                      className="flex-1 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-400 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all"
+                    >
+                      <CheckCircle2 size={10} /> Authorize
+                    </button>
+                    <button 
+                       title="Dismiss Proposal"
+                       className="p-1.5 bg-white/5 hover:bg-red-500/20 text-white/20 hover:text-red-400 rounded-lg transition-all"
+                    >
+                      <XCircle size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4 mt-6">
             <div className="p-4 rounded-xl bg-white/5 border border-white/10">
               <div className="flex items-center gap-2 text-blue-400 mb-1">
                 <Clock size={16} />
                 <span className="text-xs font-semibold uppercase tracking-wider">Predictive Milestone</span>
               </div>
-              <p className="text-lg font-bold text-white">{forecast?.nextMilestone || 'Analyzing...'}</p>
-              <p className="text-xs text-white/50">{forecast?.daysToMilestone} days remaining</p>
+              <p className="text-lg font-bold text-white leading-none mt-2">{forecast?.nextMilestone || 'Analyzing...'}</p>
+              <p className="text-[10px] text-white/30 font-black uppercase mt-1 tracking-widest">{forecast?.daysToMilestone} days remaining</p>
             </div>
 
             <div className={`p-4 rounded-xl border ${
@@ -160,52 +272,57 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
                 <TrendingUp size={16} />
                 <span className="text-xs font-semibold uppercase tracking-wider">Health Outlook</span>
               </div>
-              <p className="text-lg font-bold text-white">{risk?.healthOutlook || 'STABLE'}</p>
-              <p className="text-xs text-white/50">{risk?.recommendation}</p>
+              <p className="text-lg font-bold text-white leading-none mt-2">{risk?.healthOutlook || 'STABLE'}</p>
+              <p className="text-[9px] text-white/40 leading-tight mt-2 font-medium">{risk?.recommendation}</p>
             </div>
           </div>
-        {/* Happiness & Status Indicators */}
-        <div className="flex items-center gap-2 mb-6 ml-[-4px]">
+
+        {/* Vitality & status Indicators */}
+        <div className="flex items-center gap-2 mb-6 ml-[-4px] mt-8">
           <div className="flex-1 bg-white/5 px-3 py-2 rounded-2xl border border-white/5">
             <div className="flex items-center justify-between mb-1.5 px-0.5">
-              <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Vital Signs</span>
-              <span className="text-[10px] font-black text-brand-green uppercase tracking-widest">{specimen.health || 85}% Nominal</span>
+              <span className="text-[10px] font-black text-white/30 uppercase tracking-widest font-black uppercase">Vital Signs</span>
+              <span className="text-[10px] font-black text-brand-green uppercase tracking-widest font-black uppercase">{specimen.health || 85}% Nominal</span>
             </div>
             <div className="h-1 bg-white/10 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-brand-green rounded-full shadow-[0_0_10px_rgba(52,211,153,0.5)] transition-all duration-1000" 
+                className="h-full bg-brand-green rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(52,211,153,0.5)]" 
                 style={{ width: `${specimen.health || 85}%` }} 
               />
             </div>
           </div>
           <div className="px-3 py-2 bg-brand-green/10 rounded-2xl border border-brand-green/20 flex flex-col items-center justify-center min-w-[70px]">
-            <span className="text-[9px] font-black text-brand-green/50 uppercase tracking-widest mb-0.5">Alert Level</span>
-            <span className="text-[10px] font-black text-brand-green uppercase tracking-tight">{(specimen.health || 0) > 80 ? "NORMAL" : "STRESSED"}</span>
+            <span className="text-[9px] font-black text-brand-green/50 uppercase tracking-widest mb-0.5 font-black uppercase">Alert Level</span>
+            <span className="text-[10px] font-black text-brand-green uppercase tracking-tight font-black uppercase">{(specimen.health || 0) > 80 ? "NORMAL" : "STRESSED"}</span>
           </div>
         </div>
 
         <div className="space-y-2">
           <DetailRow icon={MapPin} label="Deployment" value={specimen.location || "Central Hub"} color="text-brand-green" bg="bg-brand-green/10" />
+          
+          <DetailRow 
+            icon={Activity} 
+            label="Truth Data" 
+            value={projectedState?.vitalityTrend || "STABLE"} 
+            color="text-emerald-400" 
+            bg="bg-emerald-400/10" 
+            badge="INFERRED"
+          />
+
           {specimen.kingdom === "Fungi" ? (
             <>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <DetailRow icon={Zap} label="Growth Medium" value={String((specimen as any).substrate || "Sawdust")} color="text-blue-400" bg="bg-blue-400/10" />
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <DetailRow icon={Waves} label="Climate Model" value={String((specimen as any).misting_schedule || "Stable")} color="text-blue-400" bg="bg-blue-400/10" />
+              <DetailRow icon={Zap} label="Growth Medium" value={(specimen as ExtendedFungi).substrate || "Sawdust"} color="text-blue-400" bg="bg-blue-400/10" />
+              <DetailRow icon={Waves} label="Climate Model" value={(specimen as ExtendedFungi).misting_schedule || "Stable"} color="text-blue-400" bg="bg-blue-400/10" />
             </>
           ) : specimen.kingdom === "Plantae" ? (
             <>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <DetailRow icon={Sun} label="Photon Input" value={String((specimen as any).light || "Ambient")} color="text-amber-400" bg="bg-amber-400/10" />
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <DetailRow icon={Droplets} label="Hydration" value={String((specimen as any).watering || "Automated")} color="text-blue-400" bg="bg-blue-400/10" />
+              <DetailRow icon={Sun} label="Photon Input" value={(specimen as ExtendedPlant).light || "Ambient"} color="text-amber-400" bg="bg-amber-400/10" />
+              <DetailRow icon={Droplets} label="Hydration" value={(specimen as ExtendedPlant).watering || "Automated"} color="text-blue-400" bg="bg-blue-400/10" />
             </>
           ) : specimen.kingdom === "Animalia" ? (
             <>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <DetailRow icon={Activity} label="Metabolic Act" value={`${(specimen as any).activity_level || 0}%`} color="text-brand-green" bg="bg-brand-green/10" />
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <DetailRow icon={Beef} label="Nutrient Pack" value={String((specimen as any).dietary_notes || "Standard")} color="text-rose-400" bg="bg-rose-400/10" />
+              <DetailRow icon={Activity} label="Metabolic Act" value={`${(specimen as ExtendedAnimalia).activity_level || 0}%`} color="text-brand-green" bg="bg-brand-green/10" />
+              <DetailRow icon={Beef} label="Nutrient Pack" value={(specimen as ExtendedAnimalia).dietary_notes || "Standard"} color="text-rose-400" bg="bg-rose-400/10" />
             </>
           ) : null}
         </div>
@@ -218,6 +335,7 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
           <>
             {/* Ask Concierge Quick Action */}
             <button 
+              title="Initialize Species Intelligence Mesh"
               className="w-full mt-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-[1.5rem] flex items-center justify-center gap-3 transition-all group relative overflow-hidden"
               onClick={async () => {
                 if (isMeshLoading) return;
@@ -269,7 +387,7 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
           </div>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <VitalCard icon={isAnimalia ? Activity : isFungal ? Waves : Droplets} label={isAnimalia ? "Metabolism" : isFungal ? "Osmosis" : "Hydration"} value={isAnimalia ? "Active" : `${Math.round((specimen.telemetry?.moisture || 0.5) * 100)}%`} color="text-blue-400" />
+          <VitalCard icon={isAnimalia ? Activity : isFungal ? Waves : Droplets} label={isAnimalia ? "Metabolism" : isFungal ? "Osmosis" : "Hydration"} value={isAnimalia ? "Active" : `${Math.round((specimen.telemetry?.moisture || 0.5) * 100)}%`} color="text-blue-400" badge="OBSERVED" />
           <VitalCard icon={isAnimalia ? Heart : Sun} label={isAnimalia ? "Pulse" : "Solar"} value={isAnimalia ? "Norm" : `${Math.round((specimen.telemetry?.light || 0.5) * 10)} UV`} color="text-amber-400" />
           <VitalCard icon={Thermometer} label="Thermal" value={`${specimen.telemetry?.temperature || 21}°C`} color="text-brand-pink" />
         </div>
@@ -282,7 +400,7 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
             <AlertCircle className="w-5 h-5" />
           </div>
           <div>
-            <h5 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-0.5">Automated Irrigation Triggered</h5>
+            <h5 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-0.5 font-black uppercase">Automated Irrigation Triggered</h5>
             <p className="text-[11px] font-bold text-white/60 leading-tight">
               Sovereign {isFungal ? "humidity" : "moisture"} floor reached. Autonomous systems engaged to restore homeostasis.
             </p>
@@ -316,7 +434,7 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
             {!raisAudit.isValid && (
               <div className="mb-4 space-y-1">
                 {raisAudit.violations.map((v, i) => (
-                  <div key={i} className="flex items-center gap-2 text-[9px] font-black text-red-300 uppercase tracking-tight">
+                  <div key={i} className="flex items-center gap-2 text-[9px] font-black text-red-300 uppercase tracking-tight font-black uppercase">
                     <AlertCircle size={10} />
                     {v.replace(/_/g, ' ')}
                   </div>
@@ -326,7 +444,7 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
 
             {(specimen.hardware_attestation_statement || specimen.last_vital_signature) && (
               <div className="mb-4">
-                <span className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1 block">Seal of Governance (Anchored)</span>
+                <span className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1 block font-black uppercase">Seal of Governance (Anchored)</span>
                 <code className="block p-2 bg-black/40 rounded-lg text-[9px] text-white/50 font-mono truncate border border-white/5">
                   {specimen.hardware_attestation_statement || specimen.last_vital_signature}
                 </code>
@@ -336,7 +454,7 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileText className="w-3 h-3 text-white/20" />
-                <span className="text-[9px] font-black text-white/30 uppercase">Regulatory Class</span>
+                <span className="text-[9px] font-black text-white/30 uppercase font-black uppercase">Regulatory Class</span>
               </div>
               <span className={`px-2 py-0.5 rounded-md text-[9px] font-black tabular-nums tracking-tighter ${specimen.compliance_status && specimen.compliance_status !== 'none' ? 'bg-red-500/20 text-red-400 border border-red-500/20' : 'bg-brand-green/20 text-brand-green border border-brand-green/20'}`}>
                 {specimen.compliance_status && specimen.compliance_status !== 'none' ? `CITES APPENDIX ${specimen.compliance_status}` : 'GLOBAL WHITE-LISTED'}
@@ -349,6 +467,7 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
             {/* Institutional Co-sign Action */}
             {!specimen.custodian_id && (
               <button 
+                title="Request Institutional Audit Co-sign"
                 className="w-full mt-4 py-2.5 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-green transition-all shadow-lg"
                 onClick={() => alert("Requesting Institutional Co-sign from NGO/Regulator Swarm...")}
               >
@@ -362,7 +481,7 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
         <div className="mb-8 border-t border-white/5 pt-8">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-[11px] font-black text-white/40 uppercase tracking-widest">Remediation Protocols</h4>
-            <span className="text-[10px] font-black text-brand-green uppercase tracking-tighter">{tasks.filter(t => t.status === 'completed').length}/{tasks.length} Resolved</span>
+            <span className="text-[10px] font-black text-brand-green uppercase tracking-tighter font-black uppercase">{tasks.filter(t => t.status === 'completed').length}/{tasks.length} Resolved</span>
           </div>
           <div className="space-y-3">
             {tasks.map((task) => (
@@ -378,11 +497,11 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
                     {task.status}
                   </span>
                 </div>
-                <p className="text-[10px] text-white/40 leading-tight mb-2">{task.description}</p>
+                <p className="text-[10px] text-white/40 leading-tight mb-2 font-medium">{task.description}</p>
                 {task.status === 'pending' && task.approvalRequired && (
                   <div className="flex items-center gap-2 text-[8px] font-black text-amber-500 uppercase tracking-widest">
                     <AlertCircle size={10} />
-                    Awaiting Custodian Authorization
+                    Awaiting Authorization
                   </div>
                 )}
               </div>
@@ -406,7 +525,7 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
       <SpecimenScanner 
         isOpen={isScannerOpen} 
         onClose={() => setIsScannerOpen(false)} 
-        specimenImageUrl={specimen.image_url} 
+        specimenImageUrl={specimen.image_url || "/placeholder-plant.png"} 
         specimenNickname={specimen.nickname} 
         kingdom={specimen.kingdom}
       />
@@ -414,14 +533,17 @@ export function SpecimenDetailPanel({ specimen, className }: SpecimenDetailPanel
   );
 }
 
-function DetailRow({ icon: Icon, label, value, color, bg }: { icon: LucideIcon, label: string, value: string, color: string, bg: string }) {
+function DetailRow({ icon: Icon, label, value, color, bg, badge }: { icon: LucideIcon, label: string, value: string, color: string, bg: string, badge?: string }) {
   return (
     <div className="flex items-center gap-3 py-1">
       <div className={`p-1.5 rounded-lg ${bg} ${color}`}>
         <Icon className="w-3.5 h-3.5" />
       </div>
       <div className="flex-1 flex items-center justify-between border-b border-white/5 pb-1">
-        <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">{label}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">{label}</span>
+          {badge && <span className="text-[7px] font-black bg-white/5 px-1 rounded-sm text-white/40 uppercase tracking-tighter">{badge}</span>}
+        </div>
         <span className="text-[11px] font-black text-white/80 uppercase tracking-tight">{value}</span>
       </div>
     </div>
@@ -444,12 +566,13 @@ function ReminderItem({ icon: Icon, label, color }: { icon: LucideIcon, label: s
   );
 }
 
-function VitalCard({ icon: Icon, label, value, color }: { icon: LucideIcon, label: string, value: string, color: string }) {
+function VitalCard({ icon: Icon, label, value, color, badge }: { icon: LucideIcon, label: string, value: string, color: string, badge?: string }) {
   return (
-    <div className="bg-white/5 border border-white/5 p-3 rounded-2xl flex flex-col items-center justify-center text-center shadow-lg hover:bg-white/10 transition-all">
+    <div className="bg-white/5 border border-white/5 p-3 rounded-2xl flex flex-col items-center justify-center text-center shadow-lg hover:bg-white/10 transition-all relative">
+      {badge && <span className="absolute top-1 right-1 text-[6px] font-black text-white/20 uppercase font-black uppercase">{badge}</span>}
       <Icon className={`w-5 h-5 ${color} mb-1 opacity-80`} />
-      <span className="text-[8px] font-black text-white/20 uppercase tracking-tighter mb-0.5">{label}</span>
-      <span className="text-xs font-black text-white/90 tabular-nums">{value}</span>
+      <span className="text-[8px] font-black text-white/20 uppercase tracking-tighter mb-0.5 font-black uppercase">{label}</span>
+      <span className="text-xs font-black text-white/90 tabular-nums font-black uppercase">{value}</span>
     </div>
   );
 }

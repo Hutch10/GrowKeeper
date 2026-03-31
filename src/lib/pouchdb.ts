@@ -47,6 +47,7 @@ export const listingsDB = createSafeDB<Listing>('growkeeper_listings');
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const treatmentsDB = createSafeDB<any>('growkeeper_treatments');
 export const logsDB = createSafeDB<object>('growkeeper_logs');
+export const operationsDB = createSafeDB<any>('growkeeper_operations');
 
 /**
  * Maps a PouchDB document to our application's domain model.

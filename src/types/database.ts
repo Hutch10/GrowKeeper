@@ -41,6 +41,12 @@ export interface Database {
           created_at: string;
           last_modified: string | null;
           last_action_type: string | null;
+          source: string | null;
+          acquisition_date: string | null;
+          soil_type: string | null;
+          environment: "indoor" | "outdoor" | "greenhouse" | null;
+          lat: number | null;
+          lon: number | null;
         };
         Insert: {
           id?: string;
@@ -70,6 +76,12 @@ export interface Database {
           created_at?: string;
           last_modified?: string | null;
           last_action_type?: string | null;
+          source?: string | null;
+          acquisition_date?: string | null;
+          soil_type?: string | null;
+          environment?: "indoor" | "outdoor" | "greenhouse" | null;
+          lat?: number | null;
+          lon?: number | null;
         };
         Update: {
           id?: string;
@@ -99,6 +111,12 @@ export interface Database {
           created_at?: string;
           last_modified?: string | null;
           last_action_type?: string | null;
+          source?: string | null;
+          acquisition_date?: string | null;
+          soil_type?: string | null;
+          environment?: "indoor" | "outdoor" | "greenhouse" | null;
+          lat?: number | null;
+          lon?: number | null;
         };
         Relationships: [];
       };
@@ -114,6 +132,9 @@ export interface Database {
           created_at: string;
           last_modified: string | null;
           last_action_type: string | null;
+          source_type: "user" | "sensor" | "agent";
+          confidence: number | null;
+          metadata: Json | null;
         };
         Insert: {
           id?: string;
@@ -126,6 +147,9 @@ export interface Database {
           created_at?: string;
           last_modified?: string | null;
           last_action_type?: string | null;
+          source_type?: "user" | "sensor" | "agent";
+          confidence?: number | null;
+          metadata?: Json | null;
         };
         Update: {
           id?: string;
@@ -138,6 +162,9 @@ export interface Database {
           created_at?: string;
           last_modified?: string | null;
           last_action_type?: string | null;
+          source_type?: "user" | "sensor" | "agent";
+          confidence?: number | null;
+          metadata?: Json | null;
         };
         Relationships: [
           {

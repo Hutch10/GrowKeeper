@@ -1,8 +1,7 @@
 "use server";
 
-import { createClient } from "@/lib/supabase-server";
 import { getAuthenticatedUser } from "@/lib/auth-server";
-import { normalizeActionError } from "@/lib/error-normalization";
+import { createClient } from "@/lib/supabase-server";
 import type { Json } from "@/types/database";
 
 export type ProjectEventType = 
@@ -13,6 +12,9 @@ export type ProjectEventType =
   | "task_created"
   | "task_completed"
   | "ai_diagnosis_run"
+  | "biological_event_logged"
+  | "agent_proposal_submitted"
+  | "agent_proposal_accepted"
   | "system_error";
 
 export async function trackAlphaEvent(
@@ -34,9 +36,13 @@ export async function trackAlphaEvent(
     });
 
     if (error) {
-      console.error("[Telemetry Error]", normalizeActionError(error).message);
+      // Log carefully but don't throw; we don't want telemetry to block core app flow
+      console.warn("[Telemetry Warning] alpha_events insert failed:", error.message);
+      if (error.code === '42P01') {
+        console.warn("[Compliance Note] alpha_events table missing on remote. Institutional Audit Ledger will use local state.");
+      }
     }
   } catch (err) {
-    console.error("[Telemetry Exception]", err);
+    console.error("[Telemetry Exception] Silent failure in trackAlphaEvent:", err);
   }
 }

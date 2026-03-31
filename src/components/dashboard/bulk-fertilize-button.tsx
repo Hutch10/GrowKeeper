@@ -2,8 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addSpecimenEvent } from "@/app/actions/specimen-events";
-import { markTaskComplete } from "@/app/actions/tasks";
 import { toast } from "sonner";
 
 interface Task {
@@ -27,35 +25,29 @@ export function BulkFertilizeButton({ tasksToFertilize }: BulkFertilizeButtonPro
 
   const handleBulkFertilize = () => {
     startTransition(async () => {
-      let successCount = 0;
-      let errorCount = 0;
+      const { operationQueue } = await import("@/lib/services/operation-queue");
+      let queuedCount = 0;
 
       for (const task of tasksToFertilize) {
         try {
-          // Log the care event
-          const eventResult = await addSpecimenEvent(task.specimen_id, {
-            event_type: "fertilized",
+          await operationQueue.enqueue('fertilize', {
+            taskId: task.id,
+            specimenId: task.specimen_id,
           });
-
-          if (eventResult.success) {
-            // Mark the task complete
-            await markTaskComplete(task.id, task.specimen_id);
-            successCount++;
-          } else {
-            errorCount++;
-          }
-        } catch {
-          errorCount++;
+          queuedCount++;
+        } catch (err) {
+          console.error("Failed to queue fertilize action:", err);
         }
       }
 
       setShowConfirm(false);
 
-      if (successCount > 0) {
-        toast.success(`Fertilized ${successCount} specimen${successCount > 1 ? "s" : ""}!`);
-      }
-      if (errorCount > 0) {
-        toast.error(`Failed to fertilize ${errorCount} specimen${errorCount > 1 ? "s" : ""}`);
+      if (queuedCount > 0) {
+        if (navigator.onLine) {
+          toast.success(`Fertilizing ${queuedCount} specimen${queuedCount > 1 ? "s" : ""}...`);
+        } else {
+          toast.info(`Offline: Queued ${queuedCount} fertilization action${queuedCount > 1 ? "s" : ""} for sync.`);
+        }
       }
 
       router.refresh();

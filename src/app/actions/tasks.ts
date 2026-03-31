@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { trackAlphaEvent } from "@/lib/services/alpha-telemetry";
+import { recordAuditEntry } from "@/lib/services/audit-ledger";
 import type { Database, TaskType } from "@/types/database";
 import type { ActionResult } from "@/app/actions/types";
 import { getAuthenticatedUser } from "@/lib/auth-server";
@@ -105,6 +106,18 @@ export async function addSpecimenTask(input: AddTaskInput): Promise<ActionResult
     if (error) {
       return { success: false, data: null, error: normalizeActionError(error).message };
     }
+
+    // Phase 2: Audit Ledger anchoring
+    await recordAuditEntry({
+      action: "CREATE",
+      target: "task",
+      targetId: task.id,
+      metadata: { 
+        specimen_id: task.specimen_id,
+        task_type: task.task_type
+      },
+      payload: task
+    });
 
     // Track Alpha Event
     await trackAlphaEvent("task_created", { 
@@ -236,6 +249,18 @@ export async function markTaskComplete(taskId: string, specimenId: string): Prom
     if (!updatedTask) {
       return { success: false, data: null, error: "Task not found or unauthorized access." };
     }
+
+    // Phase 2: Audit Ledger anchoring
+    await recordAuditEntry({
+      action: "COMPLETE",
+      target: "task",
+      targetId: updatedTask.id,
+      metadata: { 
+        specimen_id: updatedTask.specimen_id,
+        task_type: updatedTask.task_type
+      },
+      payload: updatedTask
+    });
 
     // Track Alpha Event
     await trackAlphaEvent("task_completed", { 
