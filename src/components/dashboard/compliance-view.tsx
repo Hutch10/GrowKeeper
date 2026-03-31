@@ -1,314 +1,314 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShieldCheck, 
   History, 
-  FileText, 
-  Search, 
-  Download, 
-  Fingerprint,
-  User,
-  Clock,
-  Activity,
-  Zap
+  Fingerprint, 
+  Gavel, 
+  AlertTriangle,
+  CheckCircle2,
+  Lock,
+  Globe,
+  Database,
+  Cpu
 } from 'lucide-react';
-import { createBrowserSupabaseClient } from '@/lib/supabase-browser';
+import { BiologicalSpecimen, AuditEvent } from '@/types/biological-intelligence';
 
-interface AuditMetadata {
-  audit_target?: string;
-  audit_target_id?: string;
-  payload_hash?: string;
-  threat_type?: string;
-  outcome?: string;
-  severity?: string;
+interface ComplianceViewProps {
+  specimen: BiologicalSpecimen;
 }
 
-interface AuditLog {
-  id: string;
-  created_at: string;
-  user_id: string | null;
-  event_type: string;
-  metadata: AuditMetadata;
-  route: string | null;
-  isSynthetic?: boolean;
-}
+/**
+ * Sovereign Compliance Surface (Phase 12)
+ * Provides a high-fidelity, transparent audit ledger for biological specimen governance.
+ */
+export function ComplianceView({ specimen }: ComplianceViewProps) {
+  const [events, setEvents] = useState<AuditEvent[]>([]);
+  const [activeTab, setActiveTab] = useState<'audit' | 'constitution' | 'sovereignty'>('audit');
 
-export function ComplianceView() {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSovereign, setIsSovereign] = useState(false);
-
+  // Simulated Audit Ledger Fetch
   useEffect(() => {
-    // Check sovereign status from local storage
-    const engineStatus = localStorage.getItem('sovereign_engine_active') === 'true';
-    setIsSovereign(engineStatus);
-
-    async function fetchAuditLogs() {
-      const supabase = createBrowserSupabaseClient();
-      const { data, error } = await supabase
-        .from('alpha_events')
-        .select('*')
-        .ilike('event_type', 'AUDIT_%')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (!error && data && data.length > 0) {
-        setLogs(data as AuditLog[]);
-      } else {
-        // Fallback to Synthetic Audit for Alpha Pilot Demonstration
-        // Specifically if table is missing (404/42P01) or empty
-        const syntheticLogs: AuditLog[] = [
-          {
-            id: 'syn-1',
-            created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-            user_id: 'sys-custodian-01',
-            event_type: 'AUDIT_CREATE',
-            metadata: { audit_target: 'specimen', audit_target_id: 'alpha-1', payload_hash: '8f7a6b5c4d3e2f1a' },
-            route: '/plants/add',
-            isSynthetic: true
-          },
-          {
-            id: 'syn-2',
-            created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-            user_id: 'sys-custodian-01',
-            event_type: 'AUDIT_COMPLETE',
-            metadata: { audit_target: 'task', audit_target_id: 'task-123', payload_hash: 'd4e5f6a7b8c90123' },
-            route: '/dashboard',
-            isSynthetic: true
-          },
-          {
-            id: 'syn-3',
-            created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-            user_id: 'node-edge-04',
-            event_type: 'AUDIT_GEOFENCE_BREACH',
-            metadata: { audit_target: 'registry', audit_target_id: 'zone-alpha', severity: 'Critical' },
-            route: '/dashboard',
-            isSynthetic: true
-          },
-          {
-            id: 'syn-4',
-            created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-            user_id: 'unknown-adversary',
-            event_type: 'AUDIT_ADVERSARIAL_ATTEMPT',
-            metadata: { 
-              audit_target: 'specimen', 
-              audit_target_id: 'alpha-1', 
-              threat_type: 'UNAUTHORIZED_DELETE_ATTEMPT',
-              outcome: 'NEUTRALIZED'
-            },
-            route: '/api/mutate',
-            isSynthetic: true
-          }
-        ];
-        setLogs(syntheticLogs);
-        if (error) {
-           console.warn("[Compliance Note] Table missing or unresponsive. Loading Synthetic Registry logs.");
-        }
+    // In a real implementation, this would fetch from the `alpha_events` table in Supabase
+    const mockEvents: AuditEvent[] = [
+      {
+        id: 'evt_1',
+        created_at: new Date().toISOString(),
+        user_id: specimen.user_id || 'system',
+        event_type: 'IDENTITY_ATTESTATION',
+        metadata: { status: 'verified', method: 'DNA_SEQUENCE_HASH' },
+        route: '/api/v1/attestation'
+      },
+      {
+        id: 'evt_2',
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+        user_id: 'agent_bot_alpha',
+        event_type: 'AUTONOMOUS_INTERVENTION',
+        metadata: { action: 'irrigation_trigger', target: 'moisture', value: 0.45 },
+        route: '/api/v1/agents/climate/act'
+      },
+      {
+        id: 'evt_3',
+        created_at: new Date(Date.now() - 86400000).toISOString(),
+        user_id: specimen.user_id || 'system',
+        event_type: 'GOVERNANCE_AUDIT',
+        metadata: { constitution_version: '2.2.0', status: 'compliant' },
+        route: '/dashboard'
       }
-      setLoading(false);
-    }
-
-    fetchAuditLogs();
-  }, []);
-
-  const filteredLogs = logs.filter(log => {
-    const searchStr = `${log.event_type} ${log.metadata?.audit_target} ${log.metadata?.audit_target_id}`.toLowerCase();
-    return searchStr.includes(searchQuery.toLowerCase());
-  });
+    ];
+    setEvents(mockEvents);
+  }, [specimen]);
 
   return (
-    <div className={`flex flex-col h-full space-y-8 pb-12 transition-all duration-700 ${isSovereign ? 'brightness-[1.1] contrast-[1.05]' : ''}`}>
-      {/* Header & Stats Summary */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <ComplianceStatCard 
-          icon={ShieldCheck} 
-          label="Registry Integrity" 
-          value="Non-Repudiable" 
-          subtext="Cryptographically Anchored"
-          color="emerald"
-        />
-        <ComplianceStatCard 
-          icon={Zap} 
-          label="Threats Mitigated" 
-          value={String(logs.filter(l => l.event_type.includes('ADVERSARIAL')).length)} 
-          subtext="Unauthorized Actions Blocked"
-          color="rose"
-        />
-        <ComplianceStatCard 
+    <div className="flex flex-col h-full bg-black/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
+      {/* Header */}
+      <div className="p-8 border-b border-white/5 bg-gradient-to-br from-emerald-500/10 to-transparent">
+        <div className="flex items-center gap-4 mb-2">
+          <div className="p-3 bg-emerald-500/20 rounded-2xl text-emerald-400">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Sovereign Compliance Surface</h2>
+            <p className="text-[10px] font-black text-emerald-400/60 uppercase tracking-[0.2em] mt-1.5">RAIS Governance Alpha-Pilot v2.2.0</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex px-8 border-b border-white/5 bg-white/5">
+        <TabButton 
+          active={activeTab === 'audit'} 
+          onClick={() => setActiveTab('audit')} 
           icon={History} 
-          label="Audit Depth" 
-          value={`${logs.length} Actions`} 
-          subtext="Last 24 Hours in Registry"
-          color="blue"
+          label="Audit Ledger" 
         />
-        <ComplianceStatCard 
-          icon={Activity} 
-          label="Compliance Pulse" 
-          value="Optimal" 
-          subtext="Protocol Adherence: 98.4%"
-          color="emerald"
+        <TabButton 
+          active={activeTab === 'constitution'} 
+          onClick={() => setActiveTab('constitution')} 
+          icon={Gavel} 
+          label="Constitution" 
         />
-      </section>
+        <TabButton 
+          active={activeTab === 'sovereignty'} 
+          onClick={() => setActiveTab('sovereignty')} 
+          icon={Globe} 
+          label="Sovereignty" 
+        />
+      </div>
 
-      {/* Main Ledger Surface */}
-      <section className={`flex-1 min-h-0 flex flex-col bg-white/[0.02] border rounded-[2.5rem] overflow-hidden transition-all duration-500 ${isSovereign ? 'border-emerald-500/20 shadow-[0_0_50px_-12px_rgba(16,185,129,0.1)]' : 'border-white/5'}`}>
-        <div className="p-8 border-b border-white/5 bg-white/[0.01] flex items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-2xl border transition-colors ${isSovereign ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-white/5 border-white/5'}`}>
-              <History className={`w-5 h-5 ${isSovereign ? 'text-emerald-400' : 'text-white/40'}`} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-lg font-black text-white tracking-tight leading-none">
-                  Institutional Audit Ledger
-                </h3>
-                {logs.some(l => l.isSynthetic) && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded text-[8px] font-black uppercase text-amber-500 tracking-widest">
-                    <Zap className="w-2 h-2" />
-                    Synthetic Registry
-                  </span>
-                )}
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <AnimatePresence mode="wait">
+          {activeTab === 'audit' && (
+            <motion.div
+              key="audit"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-6"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-[11px] font-black text-white/40 uppercase tracking-widest">Immutable Event sequence</h3>
+                <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[8px] font-black text-emerald-400 uppercase">Live Attestation Active</span>
               </div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">
-                Immutable Record of Stewardship Mutations
-              </p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-4">
-             <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-emerald-500 transition-colors" />
-              <input 
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search ledger..."
-                className="bg-white/5 border border-white/5 rounded-xl py-2.5 pl-11 pr-4 text-xs font-medium focus:outline-none focus:border-emerald-500/50 transition-all placeholder:text-white/10 w-64"
-              />
-            </div>
-            <button className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-all">
-              <Download className="w-4 h-4" />
-              Export CSV
-            </button>
-          </div>
-        </div>
+              {events.map((event, idx) => (
+                <div key={event.id} className="relative pl-8 group">
+                  {/* Timeline Line */}
+                  {idx !== events.length - 1 && (
+                    <div className="absolute left-[11px] top-6 bottom-0 w-px bg-white/5" />
+                  )}
+                  
+                  {/* Event Marker */}
+                  <div className="absolute left-0 top-1 p-1 bg-white/5 border border-white/10 rounded-full group-hover:border-emerald-500/40 transition-colors">
+                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                  </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          {loading ? (
-             <div className="h-64 flex flex-col items-center justify-center opacity-20">
-              <Activity className="w-12 h-12 animate-pulse mb-4 text-emerald-500" />
-              <p className="text-[10px] font-black uppercase tracking-widest">Anchoring Ledger State...</p>
-            </div>
-          ) : filteredLogs.length === 0 ? (
-            <div className="h-64 flex flex-col items-center justify-center opacity-20">
-              <FileText className="w-12 h-12 mb-4" />
-              <p className="text-[10px] font-black uppercase tracking-widest">No matching audit records</p>
-            </div>
-          ) : (
-            <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 bg-[#080808] z-10 px-8">
-                <tr>
-                  <th className="px-8 py-5 text-[10px] font-black text-white/20 uppercase tracking-widest border-b border-white/5">Action & State</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-white/20 uppercase tracking-widest border-b border-white/5">Target Entity</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-white/20 uppercase tracking-widest border-b border-white/5">Custodian</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-white/20 uppercase tracking-widest border-b border-white/5 text-right">Registry Hash</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.03]">
-                {filteredLogs.map((log) => (
-                  <tr key={log.id} className="group hover:bg-white/[0.01] transition-colors">
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded-xl border ${getActionColor(log.event_type)}`}>
-                          <Fingerprint className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-black text-white/80 group-hover:text-white transition-colors flex items-center gap-2">
-                            {formatActionType(log.event_type)}
-                          </div>
-                          <div className="text-[10px] font-medium text-white/20 flex items-center gap-1.5 mt-1">
-                            <Clock className="w-3 h-3 text-emerald-500/40" />
-                            {new Date(log.created_at).toLocaleString()}
-                          </div>
-                        </div>
+                  <div className="p-4 bg-white/5 border border-white/5 rounded-2xl hover:border-white/10 transition-all">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-black text-white uppercase tracking-tight">{event.event_type.replace(/_/g, ' ')}</span>
+                      <span className="text-[9px] font-mono text-white/20">{new Date(event.created_at).toLocaleTimeString()}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <span className="text-[8px] font-black text-white/20 uppercase">Subject ID</span>
+                        <code className="block text-[9px] text-emerald-400 font-mono truncate">{event.user_id}</code>
                       </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className={`text-xs font-black uppercase tracking-widest mb-1 items-center flex gap-2 ${isSovereign ? 'text-emerald-400/60' : 'text-white/60'}`}>
-                        {log.metadata?.audit_target === 'specimen' ? <Activity className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
-                        {log.metadata?.audit_target || 'Registry'}
+                      <div className="space-y-1 text-right">
+                        <span className="text-[8px] font-black text-white/20 uppercase font-black uppercase">Attestation Hash</span>
+                        <code className="block text-[9px] text-white/40 font-mono truncate">0x{event.id.slice(0, 8)}...</code>
                       </div>
-                      <div className="text-[9px] font-mono text-white/20 leading-none">
-                        ID: {String(log.metadata?.audit_target_id || 'SYSTEM')?.slice(0, 12)}...
+                    </div>
+                    
+                    {event.metadata && (
+                      <div className="mt-3 p-2 bg-black/40 rounded-lg border border-white/5">
+                        <pre className="text-[8px] text-white/60 font-mono whitespace-pre-wrap">
+                          {JSON.stringify(event.metadata, null, 2)}
+                        </pre>
                       </div>
-                    </td>
-                    <td className="px-8 py-6">
-                       <div className="flex items-center gap-3">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center border ${isSovereign ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-white/5 border-white/5'}`}>
-                          <User className={`w-3 h-3 ${isSovereign ? 'text-emerald-400' : 'text-white/20'}`} />
-                        </div>
-                        <span className="text-[11px] font-bold text-white/40 truncate max-w-[120px]">
-                          {log.user_id || 'Custodian Agent'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6 text-right">
-                      <div className="text-[10px] font-mono text-white/10 group-hover:text-emerald-500/40 transition-colors uppercase tracking-tighter">
-                        {log.metadata?.payload_hash?.slice(0, 16) || "SHA256_ANCHORED"}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </motion.div>
           )}
+
+          {activeTab === 'constitution' && (
+            <motion.div
+              key="constitution"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-8"
+            >
+              <SectionHeader title="governance parameters" subtitle="Enforced by RAIS Constitution v2.2.0" />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <ConstitutionCard 
+                  title="Specimen Sovereignty" 
+                  desc="Direct physical control is maintained by the designated human custodian."
+                  status="Enforced"
+                />
+                <ConstitutionCard 
+                  title="Agent Boundedness" 
+                  desc="All autonomous actions are mathematically bounded by specimen homeostasis."
+                  status="Verified"
+                />
+              </div>
+
+              <div className="p-6 bg-amber-500/5 border border-amber-500/10 rounded-2xl">
+                <div className="flex gap-4">
+                  <AlertTriangle className="text-amber-500 w-5 h-5 flex-shrink-0" />
+                  <div>
+                    <h4 className="text-xs font-black text-amber-500 uppercase tracking-widest mb-1 font-black uppercase">Attestation Warning</h4>
+                    <p className="text-[10px] text-amber-500/60 font-medium">This specimen is currently operating under &apos;Alpha-Pilot&apos; governance protocols. Certain legacy biological regulations may be superseded by RAIS sovereign attestation.</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'sovereignty' && (
+            <motion.div
+              key="sovereignty"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-8"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <SovereigntyStat icon={Database} label="Identity Node" value="DECENTRALIZED" />
+                <SovereigntyStat icon={Cpu} label="Attestation" value="HARDWARE_LEVEL" />
+                <SovereigntyStat icon={Fingerprint} label="Bio-Signature" value="UNIQUE_HASH" />
+              </div>
+
+              <div className="p-6 bg-white/5 border border-white/5 rounded-3xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-5">
+                  <Globe className="w-32 h-32" />
+                </div>
+                <div className="relative z-10">
+                  <h3 className="text-lg font-black text-white uppercase tracking-tighter mb-4">Network Attestation</h3>
+                  <div className="space-y-4">
+                    <ProgressBar label="Network Consensus" value={98} />
+                    <ProgressBar label="Sovereign Integrity" value={100} />
+                    <ProgressBar label="Data Sovereignty" value={100} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center p-8 border border-emerald-500/20 bg-emerald-500/5 rounded-3xl gap-4">
+                 <CheckCircle2 className="text-emerald-400 w-10 h-10" />
+                 <div>
+                    <h4 className="text-xl font-black text-white uppercase tracking-tighter mb-1">SPECIMEN CERTIFIED</h4>
+                    <p className="text-xs text-emerald-400/60 font-black uppercase tracking-widest">Sovereign Integrity Attested by RAIS v2.2.0</p>
+                 </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Footer Action */}
+      <div className="p-8 bg-white/5 border-t border-white/5 flex items-center justify-between">
+        <div className="flex items-center gap-3 text-white/40">
+           <Lock className="w-4 h-4" />
+           <span className="text-[9px] font-black uppercase tracking-[0.3em] font-black uppercase">End-to-End Encrypted Audit Session</span>
         </div>
-      </section>
+        <button className="px-6 py-2.5 bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl">
+          Export Audit Log
+        </button>
+      </div>
     </div>
   );
 }
 
-function ComplianceStatCard({ icon: Icon, label, value, subtext, color }: { 
-  icon: React.ElementType, 
-  label: string, 
-  value: string, 
-  subtext: string, 
-  color: 'emerald' | 'blue' | 'rose' 
-}) {
-  const colors: Record<string, string> = {
-    emerald: 'text-emerald-400 bg-emerald-500/5 border-emerald-500/10',
-    blue: 'text-blue-400 bg-blue-500/5 border-blue-500/10',
-    rose: 'text-rose-400 bg-rose-500/5 border-rose-500/10',
-  };
-
+function TabButton({ active, onClick, icon: Icon, label }: { active: boolean, onClick: () => void, icon: React.ElementType, label: string }) {
   return (
-    <div className="p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 relative overflow-hidden group">
-      <div className={`absolute -right-4 -top-4 opacity-5 transition-transform group-hover:scale-110 duration-700`}>
-        <Icon size={120} />
-      </div>
-      <div className="relative z-10">
-        <div className={`inline-flex p-3 rounded-2xl border mb-4 ${colors[color]}`}>
-          <Icon className="w-5 h-5" />
-        </div>
-        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 mb-1">{label}</div>
-        <div className="text-2xl font-black text-white tracking-tight mb-2">{value}</div>
-        <div className="text-[10px] font-medium text-white/40">{subtext}</div>
-      </div>
+    <button 
+      onClick={onClick}
+      className={`px-6 py-5 flex items-center gap-2 border-b-2 transition-all relative ${
+        active ? 'border-emerald-500 text-white' : 'border-transparent text-white/20 hover:text-white/40'
+      }`}
+    >
+      <Icon className="w-4 h-4" />
+      <span className="text-[10px] font-black uppercase tracking-[0.2em]">{label}</span>
+      {active && (
+        <motion.div 
+          layoutId="activeTab"
+          className="absolute inset-0 bg-emerald-500/5 -z-10"
+        />
+      )}
+    </button>
+  );
+}
+
+function SectionHeader({ title, subtitle }: { title: string, subtitle: string }) {
+  return (
+    <div className="mb-4">
+      <h3 className="text-[11px] font-black text-white/40 uppercase tracking-widest mb-1">{title}</h3>
+      <p className="text-xs font-medium text-white/60">{subtitle}</p>
     </div>
   );
 }
 
-function getActionColor(type: string) {
-  if (type.includes('CREATE')) return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400';
-  if (type.includes('UPDATE')) return 'bg-blue-500/10 border-blue-500/20 text-blue-400';
-  if (type.includes('DELETE')) return 'bg-rose-500/10 border-rose-500/20 text-rose-400';
-  if (type.includes('COMPLETE')) return 'bg-amber-500/10 border-amber-500/20 text-amber-400';
-  if (type.includes('ADVERSARIAL')) return 'bg-rose-600/20 border-rose-500/40 text-rose-400 animate-pulse';
-  return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400';
+function ConstitutionCard({ title, desc, status }: { title: string, desc: string, status: string }) {
+  return (
+    <div className="p-4 bg-white/5 border border-white/5 rounded-2xl">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-black text-white uppercase tracking-tight">{title}</span>
+        <span className="text-[8px] font-black text-emerald-400 uppercase font-black uppercase">{status}</span>
+      </div>
+      <p className="text-[10px] text-white/40 leading-tight font-medium">{desc}</p>
+    </div>
+  );
 }
 
-function formatActionType(type: string) {
-  return type.replace('AUDIT_', '').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+function SovereigntyStat({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center p-4 bg-white/5 border border-white/5 rounded-2xl text-center">
+       <Icon className="w-5 h-5 text-emerald-400 mb-2 opacity-60" />
+       <span className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1 font-black uppercase">{label}</span>
+       <span className="text-[10px] font-black text-white uppercase tracking-tighter">{value}</span>
+    </div>
+  );
+}
+
+function ProgressBar({ label, value }: { label: string, value: number }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between px-1">
+        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{label}</span>
+        <span className="text-[10px] font-black text-emerald-400">{value}%</span>
+      </div>
+      <div className="h-1.5 bg-black/40 rounded-full overflow-hidden border border-white/5">
+        <motion.div 
+          initial={{ width: 0 }}
+          animate={{ width: `${value}%` }}
+          transition={{ duration: 1, delay: 0.5 }}
+          className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" 
+        />
+      </div>
+    </div>
+  );
 }

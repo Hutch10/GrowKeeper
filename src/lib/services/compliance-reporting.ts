@@ -60,7 +60,7 @@ export async function generateComplianceReport(): Promise<ComplianceReport> {
   const geofenceAdherence = Math.max(0, 100 - (breaches * 10));
 
   const criticalAlerts = logs.filter(l => {
-    const meta = l.metadata as any;
+    const meta = l.metadata as Record<string, unknown> | null;
     return meta?.compliance === 'Critical' || meta?.compliance === 'Danger';
   }).length;
 

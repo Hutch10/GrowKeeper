@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { recordAuditEntry } from './audit-ledger';
+import { recordAuditEntry, type AuditEntryOptions } from './audit-ledger';
 
 // Mocking Supabase and Auth
 vi.mock('@/lib/supabase-server', () => ({
@@ -19,7 +19,7 @@ vi.mock('@/lib/auth-server', () => ({
 
 describe('Institutional Audit Ledger', () => {
   it('anchors a specimen creation action in the ledger', async () => {
-    const options: any = {
+    const options: AuditEntryOptions = {
       action: 'CREATE',
       target: 'specimen',
       targetId: 'spec-456',
@@ -32,7 +32,7 @@ describe('Institutional Audit Ledger', () => {
   });
 
   it('generates a deterministic payload hash for non-repudiation', async () => {
-     const options: any = {
+     const options: AuditEntryOptions = {
       action: 'UPDATE',
       target: 'specimen',
       targetId: 'spec-456',
@@ -45,7 +45,7 @@ describe('Institutional Audit Ledger', () => {
   });
 
   it('records a geofence breach as a critical audit event', async () => {
-    const options: any = {
+    const options: AuditEntryOptions = {
       action: 'GEOFENCE_BREACH',
       target: 'registry',
       targetId: 'zone-alpha',

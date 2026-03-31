@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
+import NextImage from 'next/image';
 
 const ARTICLES = [
   {
@@ -35,12 +36,15 @@ export function TipsSection() {
             whileHover={{ y: -4, scale: 1.01 }}
             className="group relative h-48 rounded-3xl overflow-hidden shadow-sm border border-slate-100 flex flex-col justify-end p-6 text-left"
           >
-            {/* Background Image using CSS variable to avoid inline style warning */}
-            <div 
-              className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
-              style={{ '--article-image': `url(${article.image})` } as React.CSSProperties}
-            >
-              <div className="absolute inset-0" style={{ backgroundImage: 'var(--article-image)' }} />
+            {/* Background Image - Using Next/Image for performance and lint compliance */}
+            <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-110">
+              <NextImage 
+                src={article.image} 
+                alt={article.title} 
+                fill 
+                className="object-cover"
+                unoptimized
+              />
             </div>
             
             {/* Overlay Gradient */}

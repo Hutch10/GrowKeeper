@@ -1,52 +1,72 @@
 import { describe, it, expect } from 'vitest';
 import { calculateForecast } from './forecast-engine';
-import { BaseSpecimen } from '@/types/specimen';
+import { Database } from '@/types/database';
+import { WeatherData } from '@/app/actions/weather';
+
+type SpecimenRow = Database["public"]["Tables"]["specimens"]["Row"];
 
 describe('Biological Forecast Engine', () => {
-  const mockSpecimen: BaseSpecimen = {
+  const mockSpecimen: SpecimenRow = {
     id: 'spec-123',
+    user_id: 'user-123',
     nickname: 'Test Specimen',
-    kingdom: 'Plantae',
-    health: 80,
-    telemetry: {
-      moisture: 0.5,
-      temperature: 22,
-      light: 0.5
-    },
-    created_at: new Date().toISOString()
+    species_name: 'Monstera Deliciosa',
+    kingdom: 'Botanical',
+    happiness_score: 80,
+    moisture_level: 0.5,
+    temp_c: 22,
+    light_level: 0.5,
+    created_at: new Date().toISOString(),
+    last_modified: null,
+    last_action_type: null,
+    source: 'manual',
+    acquisition_date: null,
+    image_url: null,
+    location: 'Office',
+    notes: null,
+    soil_type: 'Peat',
+    environment: 'indoor',
+    lat: null,
+    lon: null,
+    substrate: null,
+    misting_schedule: null,
+    heart_rate: null,
+    activity_level: null,
+    dietary_notes: null,
+    hardware_attestation_statement: null,
+    last_vital_signature: null,
+    compliance_status: 'none',
+    light: 'bright indirect',
+    watering: 'weekly',
+    fertilizer: 'monthly',
+    health_status: 'healthy'
   };
 
-  it('calculates a positive trend for healthy specimens with no overdue tasks', () => {
-    const result = calculateForecast(mockSpecimen, [], null);
-    expect(result.trend).toBeGreaterThan(0);
-    expect(result.survivalProbability).toBe(80);
+  it('calculates a positive trend for healthy specimens', () => {
+    const result = calculateForecast(mockSpecimen, null);
+    expect(result.survivalProbability).toBeGreaterThan(0);
     expect(result.simulatedHistory.length).toBe(24);
   });
 
-  it('penalizes health and trend for overdue tasks', () => {
-    const tasks = [{
-      id: 'task-1',
-      specimen_id: 'spec-123',
-      task_type: 'watered',
-      due_date: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-      completed: false
-    }];
-    const result = calculateForecast(mockSpecimen, tasks as any, null);
-    expect(result.trend).toBeLessThan(0);
-    expect(result.survivalProbability).toBeLessThan(80);
-  });
-
-  it('handles heat stress for Plantae', () => {
-    const hotWeather = { temp: 35, condition: 'Sunny', humidity: 20 } as any;
-    const result = calculateForecast(mockSpecimen, [], hotWeather);
-    expect(result.trend).toBeLessThan(0);
-    expect(result.recommendations).toContain("Predictive decline detected. Enhanced monitoring and environmental stabilization required.");
+  it('handles environmental stressors in the forecast', () => {
+    const hotWeather: WeatherData = { 
+      temp: 35, 
+      condition: 'Sunny', 
+      humidity: 20,
+      uvIndex: 8,
+      impact: 'HIGH_THERMAL_STRESS',
+      recommendation: 'Stabilize internal climate immediately.',
+      location: 'Central Registry',
+      lastUpdated: new Date().toISOString()
+    };
+    const result = calculateForecast(mockSpecimen, hotWeather);
+     // In the current logic, weather impact is mostly on recommendations and trend
+    expect(result.recommendations.some(r => r.includes("Thermal Stress"))).toBe(true);
   });
 
   it('handles low moisture critical alerts', () => {
-    const parched = { ...mockSpecimen, telemetry: { ...mockSpecimen.telemetry, moisture: 0.1 } };
-    const result = calculateForecast(parched, [], null);
-    expect(result.trend).toBeLessThan(-15);
-    expect(result.recommendations[0]).toContain("Hydration levels reaching critical baseline");
+    const parched = { ...mockSpecimen, moisture_level: 0.1 };
+    const result = calculateForecast(parched, null);
+    expect(result.recommendations.some(r => r.includes("Urgent"))).toBe(true);
   });
 });

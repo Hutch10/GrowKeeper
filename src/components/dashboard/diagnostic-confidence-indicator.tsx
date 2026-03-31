@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { motion } from 'framer-motion';
 
 export interface DiagnosticConfidenceIndicatorProps {
   confidence: number; // 0-1
@@ -46,16 +47,16 @@ export const DiagnosticConfidenceIndicator: React.FC<DiagnosticConfidenceIndicat
       
       {/* Precision Progress Bar */}
       <div className="h-2 w-full bg-black/30 rounded-full overflow-hidden border border-white/5">
-        <div 
-          className={`h-full transition-all duration-1000 ease-out rounded-full ${
+        <motion.div 
+          initial={{ width: 0 }}
+          animate={{ width: `${percentage}%` }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
+          className={`h-full rounded-full ${
             confidence > 0.8 ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]' :
             confidence > 0.5 ? 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]' :
             'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.5)]'
           }`}
-          style={{ '--progress-percentage': `${percentage}%` } as React.CSSProperties}
-        >
-          <div className="h-full bg-inherit rounded-full" style={{ width: 'var(--progress-percentage)' }} />
-        </div>
+        />
       </div>
 
       <p className="mt-2 text-[10px] leading-tight opacity-60 uppercase font-medium">

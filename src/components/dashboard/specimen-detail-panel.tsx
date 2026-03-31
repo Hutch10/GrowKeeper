@@ -19,7 +19,8 @@ import {
   TrendingUp,
   Beef,
   Activity,
-  Heart
+  Heart,
+  Fingerprint
 } from "lucide-react";
 
 
@@ -28,6 +29,7 @@ import { riskService, RiskAnalysis } from '@/lib/services/risk-assessment';
 import { RAIS_CONSTITUTION } from '@/lib/rais-constitution';
 
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { SpecimenScanner } from "@/components/plants/specimen-scanner";
 import { LineageView } from "@/components/plants/lineage-view";
 import { FractionalVaultPanel } from "@/components/finance/fractional-vault-panel";
@@ -42,17 +44,8 @@ import { DiagnosticConfidenceIndicator } from "./diagnostic-confidence-indicator
 import { getPendingProposals, acceptAgentProposal, type AgentProposal } from "@/app/actions/proposals";
 import { deriveSpecimenState, type ProjectedState } from "@/lib/services/biological-engine";
 import { CheckCircle2, XCircle } from "lucide-react";
-
-// Type alias to satisfy legacy service requirements while maintaining hardening
-type SpecimenIntelligenceRecord = SpecimenRow & {
-  light?: string | null;
-  watering?: string | null;
-  fertilizer?: string | null;
-  happiness_score?: number | null;
-  lat?: number | null;
-  lon?: number | null;
-  region?: string | null;
-};
+import { CompleteSpecimen } from "@/types/biological-intelligence";
+import { ComplianceView } from "./compliance-view";
 
 interface SpecimenDetailPanelProps {
   className?: string;
@@ -61,22 +54,6 @@ interface SpecimenDetailPanelProps {
   onEdit?: (specimen: SpecimenRow) => void;
   onClose?: () => void;
   onOpenCompliance?: (specimen: SpecimenRow) => void;
-}
-
-// Kingdom-specific type extensions for structural hardening
-interface ExtendedPlant extends SpecimenIntelligenceRecord {
-  light?: string;
-  watering?: string;
-}
-
-interface ExtendedFungi extends SpecimenIntelligenceRecord {
-  substrate?: string;
-  misting_schedule?: string;
-}
-
-interface ExtendedAnimalia extends SpecimenIntelligenceRecord {
-  activity_level?: number;
-  dietary_notes?: string;
 }
 
 /**
@@ -94,27 +71,27 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
   const [careProtocol, setCareProtocol] = useState<CareProtocol | null>(null);
   const [healthForecast, setHealthForecast] = useState<HealthForecast | null>(null);
   const [proposals, setProposals] = useState<AgentProposal[]>([]);
+  const [isComplianceOpen, setIsComplianceOpen] = useState(false);
   const [projectedState, setProjectedState] = useState<ProjectedState | null>(null);
 
   useEffect(() => {
     if (specimen) {
-      // Cast for service compatibility
-      const intelSpecimen = specimen as SpecimenIntelligenceRecord;
-      forecasting.predictMilestone(intelSpecimen).then(setForecast);
-      riskService.assessRisk(intelSpecimen).then(setRisk);
+      const completeSpecimen = specimen as unknown as CompleteSpecimen;
+      forecasting.predictMilestone(completeSpecimen).then(setForecast);
+      riskService.assessRisk(completeSpecimen).then(setRisk);
       treatmentProtocolService.getSpecimenTasks(specimen.id).then(setTasks); 
       
       // Fetch Proposals (Phase 5)
       getPendingProposals(specimen.id).then(setProposals);
       
       // Derive State (Phase 1)
-      const state = deriveSpecimenState(specimen, []); 
+      const state = deriveSpecimenState(completeSpecimen, []); 
       setProjectedState(state);
 
       const forecastData = healthForecastService.generateForecast(
         specimen.id, 
         specimen.health || 85, 
-        specimen.kingdom || "Plantae",
+        (specimen.kingdom as "Botanical" | "Mycology" | "Animalia") || "Botanical",
         specimen.telemetry || {}
       );
       setHealthForecast(forecastData);
@@ -145,11 +122,12 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
     );
   }
 
-  const raisAudit = RAIS_CONSTITUTION.validateSpecimen(specimen);
+  const completeSpecimen = specimen as unknown as CompleteSpecimen;
+  const raisAudit = RAIS_CONSTITUTION.validateSpecimen(completeSpecimen);
 
-  const isFungal = specimen.kingdom === "Fungi";
+  const isMycology = specimen.kingdom === "Mycology";
   const isAnimalia = specimen.kingdom === "Animalia";
-  const displayImage = specimen.image_url || (isFungal 
+  const displayImage = specimen.image_url || (isMycology 
     ? `https://images.unsplash.com/photo-1544070282-591d487abc53?q=80&w=400&h=400&auto=format&fit=crop`
     : isAnimalia
       ? `https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400&h=400&auto=format&fit=crop`
@@ -285,9 +263,11 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
               <span className="text-[10px] font-black text-brand-green uppercase tracking-widest font-black uppercase">{specimen.health || 85}% Nominal</span>
             </div>
             <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-brand-green rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(52,211,153,0.5)]" 
-                style={{ width: `${specimen.health || 85}%` }} 
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${specimen.health || 85}%` }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+                className="h-full bg-brand-green rounded-full shadow-[0_0_10px_rgba(52,211,153,0.5)]" 
               />
             </div>
           </div>
@@ -309,20 +289,20 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
             badge="INFERRED"
           />
 
-          {specimen.kingdom === "Fungi" ? (
+          {specimen.kingdom === "Mycology" ? (
             <>
-              <DetailRow icon={Zap} label="Growth Medium" value={(specimen as ExtendedFungi).substrate || "Sawdust"} color="text-blue-400" bg="bg-blue-400/10" />
-              <DetailRow icon={Waves} label="Climate Model" value={(specimen as ExtendedFungi).misting_schedule || "Stable"} color="text-blue-400" bg="bg-blue-400/10" />
+              <DetailRow icon={Zap} label="Growth Medium" value={specimen.substrate || "Sawdust"} color="text-blue-400" bg="bg-blue-400/10" />
+              <DetailRow icon={Waves} label="Climate Model" value={specimen.misting_schedule || "Stable"} color="text-blue-400" bg="bg-blue-400/10" />
             </>
-          ) : specimen.kingdom === "Plantae" ? (
+          ) : specimen.kingdom === "Botanical" ? (
             <>
-              <DetailRow icon={Sun} label="Photon Input" value={(specimen as ExtendedPlant).light || "Ambient"} color="text-amber-400" bg="bg-amber-400/10" />
-              <DetailRow icon={Droplets} label="Hydration" value={(specimen as ExtendedPlant).watering || "Automated"} color="text-blue-400" bg="bg-blue-400/10" />
+              <DetailRow icon={Sun} label="Photon Input" value={specimen.light || "Ambient"} color="text-amber-400" bg="bg-amber-400/10" />
+              <DetailRow icon={Droplets} label="Hydration" value={specimen.watering || "Automated"} color="text-blue-400" bg="bg-blue-400/10" />
             </>
           ) : specimen.kingdom === "Animalia" ? (
             <>
-              <DetailRow icon={Activity} label="Metabolic Act" value={`${(specimen as ExtendedAnimalia).activity_level || 0}%`} color="text-brand-green" bg="bg-brand-green/10" />
-              <DetailRow icon={Beef} label="Nutrient Pack" value={(specimen as ExtendedAnimalia).dietary_notes || "Standard"} color="text-rose-400" bg="bg-rose-400/10" />
+              <DetailRow icon={Activity} label="Metabolic Act" value={`${specimen.activity_level || 0}%`} color="text-brand-green" bg="bg-brand-green/10" />
+              <DetailRow icon={Beef} label="Nutrient Pack" value={specimen.dietary_notes || "Standard"} color="text-rose-400" bg="bg-rose-400/10" />
             </>
           ) : null}
         </div>
@@ -344,8 +324,8 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
                 // Simulate neural synchronization delay
                 await new Promise(r => setTimeout(r, 2000));
                 
-                const nodes = await speciesIntelligenceService.getIntelligenceMesh(specimen);
-                const protocol = await speciesIntelligenceService.getAdaptiveCareProtocol(specimen);
+                const nodes = await speciesIntelligenceService.getIntelligenceMesh(completeSpecimen);
+                const protocol = await speciesIntelligenceService.getAdaptiveCareProtocol(completeSpecimen);
                 
                 setMeshNodes(nodes);
                 setCareProtocol(protocol);
@@ -368,11 +348,11 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
 
             {/* Institutional Liquidity Layer */}
             <div className="mt-4">
-              <FractionalVaultPanel specimen={specimen} />
+              <FractionalVaultPanel specimen={completeSpecimen} />
             </div>
 
             {/* Parametric Resilience Layer */}
-            <ParametricInsurancePanel specimen={specimen} />
+            <ParametricInsurancePanel specimen={completeSpecimen} />
           </>
         )}
       </div>
@@ -387,7 +367,7 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
           </div>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <VitalCard icon={isAnimalia ? Activity : isFungal ? Waves : Droplets} label={isAnimalia ? "Metabolism" : isFungal ? "Osmosis" : "Hydration"} value={isAnimalia ? "Active" : `${Math.round((specimen.telemetry?.moisture || 0.5) * 100)}%`} color="text-blue-400" badge="OBSERVED" />
+          <VitalCard icon={isAnimalia ? Activity : isMycology ? Waves : Droplets} label={isAnimalia ? "Metabolism" : isMycology ? "Osmosis" : "Hydration"} value={isAnimalia ? "Active" : `${Math.round((specimen.telemetry?.moisture || 0.5) * 100)}%`} color="text-blue-400" badge="OBSERVED" />
           <VitalCard icon={isAnimalia ? Heart : Sun} label={isAnimalia ? "Pulse" : "Solar"} value={isAnimalia ? "Norm" : `${Math.round((specimen.telemetry?.light || 0.5) * 10)} UV`} color="text-amber-400" />
           <VitalCard icon={Thermometer} label="Thermal" value={`${specimen.telemetry?.temperature || 21}°C`} color="text-brand-pink" />
         </div>
@@ -402,7 +382,7 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
           <div>
             <h5 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-0.5 font-black uppercase">Automated Irrigation Triggered</h5>
             <p className="text-[11px] font-bold text-white/60 leading-tight">
-              Sovereign {isFungal ? "humidity" : "moisture"} floor reached. Autonomous systems engaged to restore homeostasis.
+              Sovereign {isMycology ? "humidity" : "moisture"} floor reached. Autonomous systems engaged to restore homeostasis.
             </p>
           </div>
         </div>
@@ -460,6 +440,14 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
                 {specimen.compliance_status && specimen.compliance_status !== 'none' ? `CITES APPENDIX ${specimen.compliance_status}` : 'GLOBAL WHITE-LISTED'}
               </span>
             </div>
+
+            <button 
+              onClick={() => setIsComplianceOpen(true)}
+              className="w-full mt-4 py-2 border border-brand-green/30 bg-brand-green/5 text-[9px] font-black text-brand-green uppercase tracking-widest rounded-xl hover:bg-brand-green/10 transition-all flex items-center justify-center gap-2"
+            >
+              <Fingerprint size={12} />
+              Open Compliance Surface
+            </button>
           </div>
         </div>
       </div>
@@ -513,8 +501,8 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
       <div className="mb-8 border-t border-white/5 pt-8">
         <h4 className="text-[11px] font-black text-white/40 uppercase tracking-widest mb-4">Registry Feed</h4>
         <div className="space-y-2">
-          <ReminderItem icon={isAnimalia ? Beef : isFungal ? Waves : Droplets} label={isAnimalia ? "Nutrient Distribution: 4h" : isFungal ? "Atmospheric Mist: 2d" : "Hydration Cycle: 2d"} color="bg-blue-500/20" />
-          <ReminderItem icon={Zap} label={isAnimalia ? "Vital Booster: Daily" : isFungal ? "Mineralization: 10d" : "Soil Enrichment: 10d"} color="bg-orange-500/20" />
+          <ReminderItem icon={isAnimalia ? Beef : isMycology ? Waves : Droplets} label={isAnimalia ? "Nutrient Distribution: 4h" : isMycology ? "Atmospheric Mist: 2d" : "Hydration Cycle: 2d"} color="bg-blue-500/20" />
+          <ReminderItem icon={Zap} label={isAnimalia ? "Vital Booster: Daily" : isMycology ? "Mineralization: 10d" : "Soil Enrichment: 10d"} color="bg-orange-500/20" />
         </div>
       </div>
 
@@ -529,6 +517,36 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
         specimenNickname={specimen.nickname} 
         kingdom={specimen.kingdom}
       />
+
+      <AnimatePresence>
+        {isComplianceOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+              onClick={() => setIsComplianceOpen(false)}
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-5xl h-[85vh] z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button 
+                onClick={() => setIsComplianceOpen(false)}
+                title="Close Compliance Surface"
+                className="absolute -top-4 -right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white border border-white/10 backdrop-blur-xl z-20 transition-all hover:rotate-90"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+              <ComplianceView specimen={completeSpecimen} />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </aside>
   );
 }

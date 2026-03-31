@@ -21,13 +21,11 @@ export type ActionResult<T> =
       retryable?: boolean;
     };
 
-import type { Kingdom, BaseSpecimen } from "@/types/specimen";
+import { BiologicalSpecimen, BotanicalSpecimen, MycologySpecimen, AnimaliaSpecimen, KingdomType } from "@/types/biological-intelligence";
 
-export type SpecimenRow = BaseSpecimen;
-export type PlantSpecimen = BaseSpecimen & Record<string, unknown>;
-export type FungalSpecimen = BaseSpecimen & Record<string, unknown>;
-export type AnimaliaSpecimen = BaseSpecimen & Record<string, unknown>;
-export type { Kingdom, BaseSpecimen };
+export type SpecimenRow = BiologicalSpecimen;
+export type { BotanicalSpecimen, MycologySpecimen, AnimaliaSpecimen };
+export type Kingdom = KingdomType;
 
 // Payload for actions like listing a specimen for sale
 export interface SpecimenActionPayload {
