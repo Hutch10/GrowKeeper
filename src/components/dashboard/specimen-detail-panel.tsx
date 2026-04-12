@@ -91,7 +91,7 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
       const forecastData = healthForecastService.generateForecast(
         specimen.id, 
         specimen.health || 85, 
-        (specimen.kingdom as "Botanical" | "Mycology" | "Animalia") || "Botanical",
+        specimen.kingdom || "Plantae",
         specimen.telemetry || {}
       );
       setHealthForecast(forecastData);
@@ -125,9 +125,9 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
   const completeSpecimen = specimen as unknown as CompleteSpecimen;
   const raisAudit = RAIS_CONSTITUTION.validateSpecimen(completeSpecimen);
 
-  const isMycology = specimen.kingdom === "Mycology";
+  const isFungi = specimen.kingdom === "Fungi";
   const isAnimalia = specimen.kingdom === "Animalia";
-  const displayImage = specimen.image_url || (isMycology 
+  const displayImage = specimen.image_url || (isFungi 
     ? `https://images.unsplash.com/photo-1544070282-591d487abc53?q=80&w=400&h=400&auto=format&fit=crop`
     : isAnimalia
       ? `https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400&h=400&auto=format&fit=crop`
@@ -289,12 +289,12 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
             badge="INFERRED"
           />
 
-          {specimen.kingdom === "Mycology" ? (
+          {specimen.kingdom === "Fungi" ? (
             <>
               <DetailRow icon={Zap} label="Growth Medium" value={specimen.substrate || "Sawdust"} color="text-blue-400" bg="bg-blue-400/10" />
               <DetailRow icon={Waves} label="Climate Model" value={specimen.misting_schedule || "Stable"} color="text-blue-400" bg="bg-blue-400/10" />
             </>
-          ) : specimen.kingdom === "Botanical" ? (
+          ) : specimen.kingdom === "Plantae" ? (
             <>
               <DetailRow icon={Sun} label="Photon Input" value={specimen.light || "Ambient"} color="text-amber-400" bg="bg-amber-400/10" />
               <DetailRow icon={Droplets} label="Hydration" value={specimen.watering || "Automated"} color="text-blue-400" bg="bg-blue-400/10" />
@@ -367,7 +367,7 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
           </div>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <VitalCard icon={isAnimalia ? Activity : isMycology ? Waves : Droplets} label={isAnimalia ? "Metabolism" : isMycology ? "Osmosis" : "Hydration"} value={isAnimalia ? "Active" : `${Math.round((specimen.telemetry?.moisture || 0.5) * 100)}%`} color="text-blue-400" badge="OBSERVED" />
+          <VitalCard icon={isAnimalia ? Activity : isFungi ? Waves : Droplets} label={isAnimalia ? "Metabolism" : isFungi ? "Osmosis" : "Hydration"} value={isAnimalia ? "Active" : `${Math.round((specimen.telemetry?.moisture || 0.5) * 100)}%`} color="text-blue-400" badge="OBSERVED" />
           <VitalCard icon={isAnimalia ? Heart : Sun} label={isAnimalia ? "Pulse" : "Solar"} value={isAnimalia ? "Norm" : `${Math.round((specimen.telemetry?.light || 0.5) * 10)} UV`} color="text-amber-400" />
           <VitalCard icon={Thermometer} label="Thermal" value={`${specimen.telemetry?.temperature || 21}°C`} color="text-brand-pink" />
         </div>
@@ -382,7 +382,7 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
           <div>
             <h5 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-0.5 font-black uppercase">Automated Irrigation Triggered</h5>
             <p className="text-[11px] font-bold text-white/60 leading-tight">
-              Sovereign {isMycology ? "humidity" : "moisture"} floor reached. Autonomous systems engaged to restore homeostasis.
+              Sovereign {isFungi ? "humidity" : "moisture"} floor reached. Autonomous systems engaged to restore homeostasis.
             </p>
           </div>
         </div>
@@ -501,8 +501,8 @@ export function SpecimenDetailPanel({ specimen, className, onClose, onOpenCompli
       <div className="mb-8 border-t border-white/5 pt-8">
         <h4 className="text-[11px] font-black text-white/40 uppercase tracking-widest mb-4">Registry Feed</h4>
         <div className="space-y-2">
-          <ReminderItem icon={isAnimalia ? Beef : isMycology ? Waves : Droplets} label={isAnimalia ? "Nutrient Distribution: 4h" : isMycology ? "Atmospheric Mist: 2d" : "Hydration Cycle: 2d"} color="bg-blue-500/20" />
-          <ReminderItem icon={Zap} label={isAnimalia ? "Vital Booster: Daily" : isMycology ? "Mineralization: 10d" : "Soil Enrichment: 10d"} color="bg-orange-500/20" />
+          <ReminderItem icon={isAnimalia ? Beef : isFungi ? Waves : Droplets} label={isAnimalia ? "Nutrient Distribution: 4h" : isFungi ? "Atmospheric Mist: 2d" : "Hydration Cycle: 2d"} color="bg-blue-500/20" />
+          <ReminderItem icon={Zap} label={isAnimalia ? "Vital Booster: Daily" : isFungi ? "Mineralization: 10d" : "Soil Enrichment: 10d"} color="bg-orange-500/20" />
         </div>
       </div>
 

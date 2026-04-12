@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Camera, 
@@ -11,7 +11,6 @@ import {
   ArrowRight, 
   ArrowLeft, 
   Check, 
-  Waves, 
   Flower2, 
   Heart, 
   ShieldCheck, 
@@ -22,6 +21,7 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { useSpecimenData } from "@/hooks/use-specimen-data";
 import { useSyncMutation } from "@/hooks/use-mutation";
+import { useSystemLog } from "@/hooks/use-system-log";
 
 const STEPS = [
   { id: "kingdom", title: "Kingdom", icon: Leaf },
@@ -55,12 +55,22 @@ interface AddSpecimenFormProps {
 export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
   const router = useRouter();
   const { addSpecimen } = useSpecimenData();
+  const { addLog } = useSystemLog();
   const { mutate: performAdd, isPending } = useSyncMutation(addSpecimen);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
   const [currentStep, setCurrentStep] = useState(0);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (progressBarRef.current) {
+      const progress = Math.round((currentStep / (STEPS.length - 1)) * 100);
+      progressBarRef.current.style.width = `${progress}%`;
+    }
+  }, [currentStep]);
 
   // Form State
-  const [kingdom, setKingdom] = useState<"Plantae" | "Fungi" | "Animalia">("Plantae");
+  const [kingdom, setKingdom] = useState<"Plantae" | "Fungi" | "Animalia" | null>(null);
   const [nickname, setNickname] = useState("");
   const [speciesName, setSpeciesName] = useState("");
   const [notes, setNotes] = useState("");
@@ -70,13 +80,12 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
   // Care fields (shared or kingdom-specific)
   const [watering, setWatering] = useState(""); 
   const [light, setLight] = useState(""); 
-  const [fertilizer, setFertilizer] = useState(""); 
   const [substrate, setSubstrate] = useState(""); 
   
   // Animalia specific
-  const [heartRate, setHeartRate] = useState<number | "">(""); 
-  const [activityLevel, setActivityLevel] = useState<number | "">("");
-  const [dietaryNotes, setDietaryNotes] = useState("");
+  const [heartRate] = useState<number | "">(""); 
+  const [activityLevel] = useState<number | "">("");
+  const [dietaryNotes] = useState("");
 
   const [location, setLocation] = useState("Living Room");
   const [lat, setLat] = useState<number | null>(null);
@@ -121,11 +130,45 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
   };
 
   const handleNext = () => {
-    if (currentStep === 1 && !nickname.trim()) {
-      setError("Please give your specimen a nickname.");
+    setError(null);
+    
+    // Step 0: Kingdom Selection
+    if (currentStep === 0 && !kingdom) {
+      const msg = "Please select a biological kingdom to proceed.";
+      setError(msg);
+      setFieldErrors({ kingdom: true });
+      addLog(`[WARN] ${msg.toUpperCase()}`, 'warn');
       return;
     }
-    setError(null);
+
+    // Step 1: Identity Validation
+    if (currentStep === 1) {
+      if (!nickname.trim()) {
+        const msg = "Please give your specimen a nickname.";
+        setError(msg);
+        setFieldErrors({ nickname: true });
+        addLog(`[WARN] Identity validation failed: NICKNAME missing.`, 'warn');
+        return;
+      }
+    }
+
+    // Step 3: Location Validation
+    if (currentStep === 3) {
+      if (!location.trim()) {
+        const msg = "Please specify a location.";
+        setError(msg);
+        setFieldErrors({ location: true });
+        addLog(`[WARN] Positional data missing: LOCATION required.`, 'warn');
+        return;
+      }
+    }
+    
+    if (currentStep === 4) {
+      addLog(`[EVENT] Initiating final synchronization for "${nickname}"...`, 'event');
+    }
+
+    setFieldErrors({});
+
     if (currentStep < STEPS.length - 1) setCurrentStep((s) => s + 1);
   };
 
@@ -145,7 +188,7 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
       species_name: speciesName.trim(),
       notes: notes.trim(),
       location,
-      kingdom,
+      kingdom: kingdom as string,
     };
 
     if (kingdom === "Plantae") {
@@ -173,8 +216,7 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
 
       if (image) formData.append("file", image);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await performAdd(formData as any);
+      const result = await performAdd(formData as FormData);
 
       if (result.success) {
         toast.success("Specimen successfully anchored to the Sovereign Registry.");
@@ -200,21 +242,23 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
-                { id: "Plantae", title: "Botanical", desc: "Plants & Flowers", icon: Leaf, color: "bg-emerald-500 text-black", border: "border-emerald-500/20" },
-                { id: "Fungi", title: "Mycology", desc: "Mushrooms & Fungi", icon: Flower2, color: "bg-amber-400 text-black", border: "border-amber-400/20" },
+                { id: "Plantae", title: "Plantae", desc: "Botanical Species", icon: Leaf, color: "bg-emerald-500 text-black", border: "border-emerald-500/20" },
+                { id: "Fungi", title: "Fungi", desc: "Mycelial Networks", icon: Flower2, color: "bg-amber-400 text-black", border: "border-amber-400/20" },
                 { id: "Animalia", title: "Animalia", desc: "Fauna & Wildlife", icon: Heart, color: "bg-rose-400 text-black", border: "border-rose-400/20" }
               ].map((item) => (
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => { setKingdom(item.id as any); handleNext(); }}
+                  onClick={() => { setKingdom(item.id as "Plantae" | "Fungi" | "Animalia"); handleNext(); }}
                   className={`relative p-12 rounded-[3.5rem] border-2 transition-all flex flex-col items-center gap-6 group overflow-hidden ${
                     kingdom === item.id 
                       ? `${item.border} bg-white dark:bg-white/5 scale-105 shadow-2xl shadow-emerald-500/10` 
-                      : "border-transparent bg-slate-50 dark:bg-white/[0.02] hover:scale-102 hover:bg-white dark:hover:bg-white/5"
+                      : fieldErrors.kingdom
+                        ? "border-red-500/50 bg-red-500/5"
+                        : "border-transparent bg-slate-50 dark:bg-white/[0.02] hover:scale-102 hover:bg-white dark:hover:bg-white/5"
                   }`}
                 >
-                  <div className={`p-8 rounded-[2.5rem] transition-all duration-500 ${kingdom === item.id ? item.color : "bg-slate-200 dark:bg-white/5 text-slate-400 dark:text-white/20 group-hover:scale-110"}`}>
+                  <div className={`p-8 rounded-[2.5rem] transition-all duration-500 ${kingdom === item.id ? item.color : fieldErrors.kingdom ? "bg-red-500 text-white" : "bg-slate-200 dark:bg-white/5 text-slate-400 dark:text-white/20 group-hover:scale-110"}`}>
                     <item.icon className="w-12 h-12" />
                   </div>
                   <div className="text-center">
@@ -258,9 +302,16 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
                 <input
                   type="text"
                   value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
+                  onChange={(e) => {
+                    setNickname(e.target.value);
+                    if (fieldErrors.nickname) setFieldErrors(prev => ({ ...prev, nickname: false }));
+                  }}
                   placeholder="e.g. Sir Moss-a-lot"
-                  className="w-full px-8 py-5 bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[2rem] outline-none focus:border-emerald-500/50 transition-all font-bold text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/10 shadow-sm"
+                  className={`w-full px-8 py-5 bg-white dark:bg-white/5 border rounded-[2rem] outline-none transition-all font-bold text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/10 shadow-sm ${
+                    fieldErrors.nickname 
+                      ? "border-red-500 focus:border-red-600 bg-red-500/5" 
+                      : "border-slate-100 dark:border-white/10 focus:border-emerald-500/50"
+                  }`}
                 />
               </div>
               <div className="space-y-4">
@@ -361,9 +412,11 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
               <p className="text-xl font-bold text-slate-400 dark:text-white/20">Deployment zone within your habitat.</p>
             </div>
 
-            <div className="bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/5 rounded-[3rem] p-10 flex items-center justify-between shadow-inner">
+            <div className={`bg-slate-50 dark:bg-white/[0.03] border rounded-[3rem] p-10 flex items-center justify-between shadow-inner transition-colors ${
+              fieldErrors.location ? "border-red-500/50 bg-red-500/5" : "border-slate-100 dark:border-white/5"
+            }`}>
               <div className="flex items-center gap-6">
-                <div className={`p-6 rounded-[2rem] transition-all duration-700 ${lat ? "bg-emerald-500 text-black shadow-2xl shadow-emerald-500/20" : "bg-white/10 text-slate-400"}`}>
+                <div className={`p-6 rounded-[2rem] transition-all duration-700 ${lat ? "bg-emerald-500 text-black shadow-2xl shadow-emerald-500/20" : fieldErrors.location ? "bg-red-500 text-white" : "bg-white/10 text-slate-400"}`}>
                   <MapPin className="w-8 h-8" />
                 </div>
                 <div>
@@ -390,11 +443,16 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
                 <button
                   key={room}
                   type="button"
-                  onClick={() => setLocation(room)}
+                  onClick={() => {
+                    setLocation(room);
+                    if (fieldErrors.location) setFieldErrors(prev => ({ ...prev, location: false }));
+                  }}
                   className={`px-6 py-8 rounded-[2.5rem] font-black text-[10px] uppercase tracking-[0.2em] transition-all border flex flex-col items-center gap-4 ${
                     location === room 
                       ? "bg-slate-800 dark:bg-white border-slate-800 dark:border-white text-white dark:text-black scale-105 shadow-2xl" 
-                      : "bg-white dark:bg-white/5 border-slate-100 dark:border-white/5 text-slate-400 hover:border-slate-800/20"
+                      : fieldErrors.location
+                        ? "border-red-500/30 bg-red-500/5 text-red-500/40"
+                        : "bg-white dark:bg-white/5 border-slate-100 dark:border-white/5 text-slate-400 hover:border-slate-800/20"
                   }`}
                 >
                   <MapPin className="w-6 h-6 opacity-40 shrink-0" />
@@ -425,8 +483,10 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
             
             <div className="bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 rounded-[3.5rem] p-12 grid grid-cols-2 gap-12 text-left shadow-inner max-w-2xl mx-auto">
               <div className="space-y-1">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Biological Class</span>
-                <p className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tighter">{kingdom === "Plantae" ? "Botanical" : kingdom === "Fungi" ? "Mycology" : "Animalia"}</p>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Biological Kingdom</span>
+                <p className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tighter">
+                  {kingdom}
+                </p>
               </div>
               <div className="space-y-1">
                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Deployment Zone</span>
@@ -468,8 +528,8 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
         <div className="px-16 py-12 flex justify-between relative bg-slate-50/50 dark:bg-white/[0.01] border-b border-white/5">
           <div className="absolute bottom-[-1px] left-16 right-16 h-[2px] bg-slate-200 dark:bg-white/5" />
           <div 
-            className="absolute bottom-[-1px] left-16 h-[2px] bg-emerald-500 transition-all duration-1000 ease-in-out shadow-[0_0_15px_rgba(16,185,129,0.5)]" 
-            style={{ width: `calc(${Math.round((currentStep / (STEPS.length - 1)) * 100)}% - 8rem)` }}
+            ref={progressBarRef}
+            className="absolute bottom-[-1px] left-16 h-[2px] bg-emerald-500 transition-all duration-1000 ease-in-out shadow-[0_0_15px_rgba(16,185,129,0.5)] step-progress-bar" 
           />
           {STEPS.map((step, idx) => {
             const Icon = step.icon;
@@ -512,7 +572,14 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
         <div className="px-16 py-12 border-t border-white/5 flex items-center justify-between bg-white/50 dark:bg-transparent backdrop-blur-md">
           <button
             type="button"
-            onClick={currentStep === 0 ? onClose : handleBack}
+            onClick={() => {
+              if (currentStep === 0) {
+                if (onClose) onClose();
+                else router.push("/plants");
+              } else {
+                handleBack();
+              }
+            }}
             className="group flex items-center gap-6 px-10 py-5 rounded-2xl font-black transition-all hover:bg-slate-50 dark:hover:bg-white/5 text-slate-400 dark:text-white/20"
           >
             <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-2" />

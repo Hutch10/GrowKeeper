@@ -61,14 +61,14 @@ export function DashboardHeader({ title, className, onMenuClick }: DashboardHead
       <div className="flex items-center gap-6">
         <div className="hidden md:flex items-center gap-4 text-xs font-black uppercase tracking-widest">
           {isOnline ? (
-            <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+            <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100 shadow-sm shadow-emerald-500/10">
               <Cloud className="w-3 h-3" />
-              <span>{isAlphaLockdown ? "Cloud Sync Active" : "Sovereign Link Active"}</span>
+              <span>{isAlphaLockdown ? "Cloud Backbone: Active" : "Sovereign Mode: Enabled"}</span>
             </div>
           ) : (
             <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-100">
               <WifiOff className="w-3 h-3" />
-              <span>{isAlphaLockdown ? "Offline Mode" : "Field Mode (Offline)"}</span>
+              <span>{isAlphaLockdown ? "Fallback Mode" : "Sovereign Override"}</span>
             </div>
           )}
           

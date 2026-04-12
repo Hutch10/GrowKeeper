@@ -21,14 +21,14 @@ function getOpenAI() {
 }
 
 /**
- * Botanical Concierge Service
- * Provides conversational expertise and automated specimen management.
+ * Biological Concierge Service
+ * Provides conversational expertise and automated specimen management across Plantae, Fungi, and Animalia.
  */
-class BotanicalConciergeService {
-  private systemPrompt = `You are the GrowKeeper Botanical Concierge, a world-class expert in botany, mycology, and indoor gardening. 
-  Your goal is to provide precise, tactical, and encouraging care advice. 
+class BiologicalConciergeService {
+  private systemPrompt = `You are the GrowKeeper Biological Concierge, an expert in Plantae, Fungi, and Animalia care. 
+  Your goal is to provide precise, tactical, and encouraging care advice across all biological sectors. 
   You have access to the user's specific specimen data when provided. 
-  Always be concise, professional, and highlight $100M-valuation quality insights.`;
+  Always be concise, professional, and highlight industrial-grade quality insights.`;
 
   /**
    * Ask a care question with optional specimen context
@@ -46,10 +46,9 @@ class BotanicalConciergeService {
         console.warn("[Concierge] Could not fetch specimen context:", err);
       }
     }
-
     const client = getOpenAI();
     if (!client) {
-      return "The Botanical Concierge is waiting for its API credentials. Please configure OPENAI_API_KEY.";
+      return "The Biological Concierge is waiting for its API credentials. Please configure OPENAI_API_KEY.";
     }
 
     try {
@@ -62,10 +61,10 @@ class BotanicalConciergeService {
         max_tokens: 500,
       });
 
-      return response.choices[0]?.message?.content || "I'm having trouble connecting to my botanical database. Please check your network.";
+      return response.choices[0]?.message?.content || "I'm having trouble connecting to my biological database. Please check your network.";
     } catch (err) {
       console.error("[Concierge] API Error:", err);
-      return "The Concierge is currently offline for a growth cycle. Please try again in a moment.";
+      return "The Concierge is currently offline for a biological maintenance cycle. Please try again in a moment.";
     }
   }
 
@@ -107,4 +106,4 @@ class BotanicalConciergeService {
   }
 }
 
-export const concierge = new BotanicalConciergeService();
+export const concierge = new BiologicalConciergeService();

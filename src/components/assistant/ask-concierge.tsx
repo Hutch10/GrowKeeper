@@ -13,7 +13,7 @@ export function AskConcierge() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Greetings! I am your Botanical Concierge. How can I assist your laboratory today?" }
+    { role: "assistant", content: "Greetings! I am your Biological Concierge. How can I assist your laboratory across the Plantae, Fungi, and Animalia sectors today?" }
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -62,8 +62,8 @@ export function AskConcierge() {
     return (
       <button 
         onClick={() => setIsOpen(true)}
-        aria-label="Open Botanical Concierge"
-        title="Open Botanical Concierge"
+        aria-label="Open Biological Concierge"
+        title="Open Biological Concierge"
         className="fixed bottom-8 right-8 w-16 h-16 bg-brand-dark text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group border-4 border-white"
       >
         <div className="absolute inset-0 bg-brand-green rounded-full animate-ping opacity-20 group-hover:opacity-40" />
@@ -84,7 +84,7 @@ export function AskConcierge() {
             <Bot className="w-6 h-6 text-brand-green" />
           </div>
           <div>
-            <h3 className="font-black text-sm uppercase tracking-widest leading-none">Botanical Concierge</h3>
+            <h3 className="font-black text-sm uppercase tracking-widest leading-none">Biological Concierge</h3>
             <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-tighter">Expert Mode Active</span>
           </div>
         </div>

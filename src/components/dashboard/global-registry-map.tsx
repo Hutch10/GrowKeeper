@@ -49,16 +49,19 @@ export function GlobalRegistryMap() {
         <div className="flex items-center gap-4">
           <div>
             <h2 className="text-2xl font-black text-white uppercase tracking-tighter">
-              {isSimulationMode ? "Biosphere Simulator" : "Sovereign Satellite View"}
+              {isSimulationMode ? "Biosphere Simulator" : "Sovereign Mode (Manual Override)"}
             </h2>
-            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mt-1">
-              {isSimulationMode ? "Predictive temporal drift engine" : "Real-time planetary biodiversity sharding"}
+            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mt-1 pr-4">
+              {isSimulationMode 
+                ? "Predictive temporal drift engine. Historical & future mycelial projections active." 
+                : "Manual command active. Distributed ledger synchronization paused for direct stewardship."}
             </p>
           </div>
           
           <button 
             onClick={() => setIsSimulationMode(!isSimulationMode)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${
+            title={isSimulationMode ? "Return to real-time operations" : "Predict future biological stressors"}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all relative group/tip ${
               isSimulationMode 
                 ? 'bg-brand-pink/20 border-brand-pink/40 text-brand-pink' 
                 : 'bg-white/5 border-white/10 text-white/40 hover:text-brand-pink hover:border-brand-pink/30'

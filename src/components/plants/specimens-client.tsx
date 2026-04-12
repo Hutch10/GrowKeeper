@@ -9,6 +9,7 @@ import { Search, Plus } from "lucide-react";
 import Link from "next/link";
 import type { SpecimenRow } from "@/app/actions/types";
 import { useSpecimens } from "@/hooks/use-specimens";
+import { SpecimenListSkeleton } from "@/components/ui/skeleton";
 
 interface SpecimensClientProps {
   initialSpecimens: SpecimenRow[];
@@ -38,8 +39,17 @@ export function SpecimensClient({ initialSpecimens }: SpecimensClientProps) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-brand-cream">
-        <div className="text-2xl font-black text-brand-dark animate-pulse">Initializing Field Instrument...</div>
+      <div className="flex min-h-screen bg-brand-cream font-sans">
+        <Sidebar aria-hidden />
+        <main className="flex-1 ml-64 p-8 overflow-y-auto">
+          <div className="flex flex-col gap-8">
+            <div className="space-y-2">
+              <div className="h-10 w-64 bg-slate-200 dark:bg-slate-700 animate-pulse rounded-lg" />
+              <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 animate-pulse rounded-lg" />
+            </div>
+            <SpecimenListSkeleton />
+          </div>
+        </main>
       </div>
     );
   }

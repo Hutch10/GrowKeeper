@@ -1,6 +1,7 @@
 "use client";
 
 import { SpecialistAgent, AgentResponse } from "./agent-bridge";
+import type { SpecimenRow, EventRow } from "@/app/actions/types";
 
 /**
  * Care Planning Agent (Phase 5 & 11)
@@ -17,7 +18,7 @@ RULES:
 3. Use a tone of objective, industrial precision.
 4. If the vitality trend is 'DECLINING', immediately propose remediation.`;
 
-  async analyze(specimen: any, events: any[]): Promise<AgentResponse> {
+  async analyze(specimen: SpecimenRow, events: EventRow[]): Promise<AgentResponse> {
     const base = await super.analyze(specimen, events);
     
     // Specialize: Propose a watering task if moisture is low
@@ -49,7 +50,7 @@ RULES:
 3. Be brutally honest about disease progression.
 4. Isolate specimens if pathological signals match designated 'CRITICAL' levels.`;
 
-  async analyze(specimen: any, events: any[]): Promise<AgentResponse> {
+  async analyze(specimen: SpecimenRow, events: EventRow[]): Promise<AgentResponse> {
     const base = await super.analyze(specimen, events);
     
     // Specialize: Propose a diagnostic audit if health score is < 50

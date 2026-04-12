@@ -1,11 +1,31 @@
 import type { Specimen, CareEvent, Reminder } from '@/types/specimen';
 import type { Listing } from '@/types/marketplace';
+import type { LogPouchDoc } from '@/types/observability';
+
+export interface BiologicalOperation {
+  id: string;
+  type: string;
+  status: 'pending' | 'completed' | 'failed' | 'syncing';
+  metadata?: Record<string, unknown>;
+}
+
+export interface BiologicalTreatment {
+  id: string;
+  specimenId: string;
+  substance?: string;
+  dosage?: string;
+  occurredAt?: string;
+  [key: string]: unknown; // Allow for other fields from TreatmentTask
+}
 
 // Local Database Instances - Initialized only on client to prevent server-side build issues
 const isBrowser = typeof window !== 'undefined';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let PouchDBInstance: any; // PouchDB typing is handled via require, keep as any for dynamic load
+// Use structural typing for PouchDB instance to satisfy linting
+let PouchDBInstance: { 
+  new <T extends object>(name: string): PouchDB.Database<T>; 
+  plugin: (plugin: unknown) => void; 
+} | null = null;
 
 if (isBrowser) {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -16,7 +36,7 @@ if (isBrowser) {
   const PouchDBFind = require('pouchdb-find');
   const findPlugin = PouchDBFind.default || PouchDBFind;
   
-  if (typeof PouchDBInstance.plugin === 'function') {
+  if (PouchDBInstance && typeof PouchDBInstance.plugin === 'function') {
     PouchDBInstance.plugin(findPlugin);
   }
 }
@@ -30,24 +50,21 @@ function createSafeDB<T extends object>(name: string): PouchDB.Database<T> {
       createIndex: () => Promise.resolve(),
       allDocs: () => Promise.resolve({ rows: [] }),
       put: () => Promise.resolve(),
-      get: () => Promise.resolve({}),
+      get: () => Promise.resolve({} as PouchDB.Core.Document<T>),
       remove: () => Promise.resolve(),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any;
+    } as unknown as PouchDB.Database<T>;
   }
   
-  return new PouchDBInstance(name);
+  return new PouchDBInstance<T>(name);
 }
 
 export const specimensDB = createSafeDB<Specimen>('growkeeper_specimens');
 export const eventsDB = createSafeDB<CareEvent>('growkeeper_events');
 export const remindersDB = createSafeDB<Reminder>('growkeeper_reminders');
 export const listingsDB = createSafeDB<Listing>('growkeeper_listings');
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const treatmentsDB = createSafeDB<any>('growkeeper_treatments');
-export const logsDB = createSafeDB<object>('growkeeper_logs');
-export const operationsDB = createSafeDB<any>('growkeeper_operations');
+export const treatmentsDB = createSafeDB<BiologicalTreatment>('growkeeper_treatments');
+export const logsDB = createSafeDB<LogPouchDoc>('growkeeper_logs');
+export const operationsDB = createSafeDB<BiologicalOperation>('growkeeper_operations');
 
 /**
  * Maps a PouchDB document to our application's domain model.
@@ -55,10 +72,11 @@ export const operationsDB = createSafeDB<any>('growkeeper_operations');
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function fromPouch<T>(doc: any): T {
-  const data = { ...doc, id: doc._id };
+  const data = { ...doc };
+  const id = data._id;
   delete data._id;
   delete data._rev;
-  return data as T;
+  return { ...data, id } as unknown as T;
 }
 
 /**
@@ -66,10 +84,10 @@ export function fromPouch<T>(doc: any): T {
  * Includes explicit version vector (updatedAt) for Tier 1 authority.
  */
 export function toPouch<T extends { id: string }>(model: T): T & { _id: string; _rev?: string; updatedAt: string } {
-  const { id, ...rest } = model as unknown as { id: string } & Record<string, unknown>;
+  const { id, ...rest } = model as unknown as Record<string, unknown>;
   return { 
     ...rest, 
-    _id: id,
+    _id: id as string,
     updatedAt: new Date().toISOString() // Deterministic local version vector
   } as unknown as T & { _id: string; _rev?: string; updatedAt: string };
 }
@@ -115,8 +133,6 @@ export async function syncWithRemote() {
     const changes = await specimensDB.allDocs({ include_docs: true });
     
     // 2. Promotion Logic (Simulation for MVP)
-    // In a real $100M app, this would be a bulk UPSERT to Supabase
-    // with conflict resolution based on 'updatedAt' version vectors.
     logger.debug('SyncEngine', `Promoting ${changes.total_rows} records to canonical vault.`);
     
     metrics.trackSyncLatency(Date.now() - startTime, 'supabase');

@@ -16,6 +16,7 @@ import {
   Navigation,
   X
 } from "lucide-react";
+import { SystemLogTerminal } from "@/components/dashboard/system-log-terminal";
 
 const NAV_ITEMS_ALL = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
@@ -101,6 +102,22 @@ export function Sidebar({ className, isOpen, onClose }: SidebarProps) {
           );
         })}
       </nav>
+      
+      {/* GLOBAL NARRATIVE LAYER: Persistent System Log */}
+      <div className="mt-6 pt-6 border-t border-white/10">
+        <div className="px-2 mb-4">
+          <div className="flex items-center gap-2 mb-1">
+             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Registry Uplink</span>
+          </div>
+          <p className="text-[9px] text-white/30 font-medium leading-relaxed italic">
+            &quot;Unified monitoring for biological systems—from spore to canopy.&quot;
+          </p>
+        </div>
+        <div className="scale-90 origin-top-left -ml-2 h-[180px]">
+          <SystemLogTerminal />
+        </div>
+      </div>
 
       {/* Decorative background element mirroring the leaf in reference */}
       <div className="absolute bottom-[-10%] left-[-20%] w-64 h-64 bg-white/5 blur-3xl rounded-full pointer-events-none" />

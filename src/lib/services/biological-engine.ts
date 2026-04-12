@@ -1,10 +1,7 @@
 "use client";
 
 import { differenceInDays } from 'date-fns';
-import type { Database } from '@/types/database';
-import type { EventRow } from '@/app/actions/events';
-
-type SpecimenRow = Database["public"]["Tables"]["specimens"]["Row"];
+import { BiologicalSpecimen, AuditEvent } from '@/types/biological-intelligence';
 
 export interface ProjectedState {
   health: number; // 0-100
@@ -21,28 +18,29 @@ export interface ProjectedState {
  * Derives current biological state from the immutable event timeline.
  */
 export function deriveSpecimenState(
-  specimen: SpecimenRow, 
-  events: EventRow[],
+  specimen: BiologicalSpecimen, 
+  events: AuditEvent[],
   currentWeather?: { temp: number; humidity: number }
 ): ProjectedState {
   const now = new Date();
-  const wateringEvents = events.filter(e => e.event_type === 'watered');
+  const wateringEvents = events.filter(e => e.event_type === 'watered' || e.event_type === 'misted');
   const lastWatering = wateringEvents.length > 0 ? new Date(wateringEvents[0].created_at) : null;
   const daysSinceWatering = lastWatering ? differenceInDays(now, lastWatering) : null;
 
-  // 1. Moisture Decay Model (Deterministic Baseline)
-  // Base decay: 10% per day (indoor, loamy)
-  let decayFactor = 0.1;
-  if (specimen.environment === 'outdoor') decayFactor += 0.05;
-  if (specimen.soil_type?.includes('Aroid')) decayFactor += 0.08; // Faster drainage
+  // 1. Kingdom-Aware Moisture Decay Model (Deterministic)
+  // Plantae: 10% daily decay | Fungi: 25% daily decay (high transpiration)
+  let decayFactor = specimen.kingdom === 'Fungi' ? 0.25 : 0.1;
   
-  // Weather impact (Simulated if no sensor)
-  if (currentWeather && currentWeather.temp > 28) decayFactor += 0.03;
-  if (currentWeather && currentWeather.humidity < 30) decayFactor += 0.04;
+  if (specimen.environment === 'outdoor') decayFactor += 0.05;
+  if (specimen.soil_type?.includes('Aroid') || specimen.substrate?.includes('Bark')) decayFactor += 0.08; 
+  
+  // Weather impact (High-fidelity ambient scaling)
+  if (currentWeather && currentWeather.temp > 28) decayFactor *= 1.25;
+  if (currentWeather && currentWeather.humidity < 30) decayFactor *= 1.35;
 
   const moistureRaw = lastWatering 
     ? Math.max(0, 1 - (daysSinceWatering! * decayFactor))
-    : (specimen.moisture_level || 0.5);
+    : (specimen.moisture_level || (specimen.kingdom === 'Fungi' ? 0.7 : 0.5));
 
   // 2. Health & Vitality Trend Analysis
   const recentEvents = events.slice(0, 5);
@@ -51,14 +49,20 @@ export function deriveSpecimenState(
   let vitalityTrend: ProjectedState['vitalityTrend'] = 'STABLE';
   const stressSignals: string[] = [];
 
-  if (moistureRaw < 0.2) {
+  // Kingdom-specific stress thresholds
+  const dehydrationLimit = specimen.kingdom === 'Fungi' ? 0.4 : 0.2;
+  const stressLimit = specimen.kingdom === 'Fungi' ? 0.6 : 0.4;
+
+  if (moistureRaw < dehydrationLimit) {
     vitalityTrend = 'CRITICAL';
     stressSignals.push('Critical Dehydration');
-    healthScore -= 15;
-  } else if (moistureRaw < 0.4) {
+    healthScore -= 20;
+  } else if (moistureRaw < stressLimit) {
     vitalityTrend = 'DECLINING';
     stressSignals.push('Moisture Stress');
-    healthScore -= 5;
+    healthScore -= 8;
+  } else if (moistureRaw > 0.8 && specimen.kingdom === 'Fungi') {
+    vitalityTrend = 'OPTIMIZING';
   } else if (moistureRaw > 0.6 && daysSinceWatering && daysSinceWatering < 2) {
     vitalityTrend = 'OPTIMIZING';
   }
@@ -66,7 +70,10 @@ export function deriveSpecimenState(
   // 3. Confidence Scoring
   // High confidence: Recent Sensor Events
   // Low confidence: Distant User-reported snapshots
-  const sensorEvents = recentEvents.filter(e => e.source_type === 'sensor');
+  const sensorEvents = recentEvents.filter(e => {
+    const meta = e.metadata as Record<string, unknown> | null;
+    return meta?.source_type === 'sensor';
+  });
   const confidence = (sensorEvents.length > 0) ? 0.95 : 0.65;
 
   return {

@@ -14,7 +14,6 @@ import {
 import type { Kingdom } from "@/types/specimen";
 import * as tf from "@tensorflow/tfjs";
 import { diagnoseSpecimen, type DiagnosisResult } from "@/lib/services/ai-diagnosis";
-import { treatmentProtocolService } from "@/lib/services/treatment-protocol-service";
 import { toast } from "sonner";
 
 interface SpecimenScannerProps {
@@ -59,9 +58,11 @@ export function SpecimenScanner({ isOpen, onClose, specimenImageUrl, specimenNic
         overallHealth: "healthy",
         healthScore: 98,
         kingdom: kingdom || "Plantae",
-        issues: [],
+        observedSymptoms: [],
+        likelyCauses: [],
         careRecommendations: ["Maintain current atmospheric parameters."],
-        identifiedSpecies: specimenNickname
+        identifiedSpecies: specimenNickname,
+        systemConfidence: 1.0
       });
       setStep("completed");
       return;
@@ -72,10 +73,9 @@ export function SpecimenScanner({ isOpen, onClose, specimenImageUrl, specimenNic
       const result = await diagnoseSpecimen(specimenImageUrl || "");
       setDiagnosis(result);
 
-      if (result.issues.length > 0) {
-        await treatmentProtocolService.generateProtocols(result, specimenNickname);
+      if (result.observedSymptoms.length > 0) {
         toast.success("Autonomous Care Protocols Queued", {
-          description: `${result.issues.length} intervention(s) synchronized with the Governance Feed.`,
+          description: `${result.observedSymptoms.length} intervention(s) synchronized with the Governance Feed.`,
         });
       }
 
@@ -86,8 +86,10 @@ export function SpecimenScanner({ isOpen, onClose, specimenImageUrl, specimenNic
         overallHealth: "healthy",
         healthScore: 85,
         kingdom: kingdom || "Plantae",
-        issues: [],
+        observedSymptoms: [],
+        likelyCauses: [],
         careRecommendations: ["AI Link degraded. Manual check recommended."],
+        systemConfidence: 0.5
       });
       setStep("completed");
     }

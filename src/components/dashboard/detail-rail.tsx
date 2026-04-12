@@ -12,7 +12,8 @@ import {
   AlertTriangle,
   TrendingDown,
   TrendingUp,
-  BrainCircuit
+  BrainCircuit,
+  Network
 } from 'lucide-react';
 import { SpecimenRow } from '@/app/actions/types';
 import { checkLegalStatus } from '@/lib/geofencing';
@@ -192,6 +193,38 @@ export function DetailRail({ specimen, tasks = [], onClose, onOpenCompliance }: 
                 </span>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Biological Systems Mapping (Systems Thinking) */}
+        <section>
+          <div className="flex items-center gap-2 mb-6">
+            <div className="w-1 h-3 bg-emerald-500 rounded-full" />
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-white/40 font-black">Biological Systems Mapping</h3>
+          </div>
+          <div className="p-6 rounded-[2.5rem] bg-indigo-500/[0.03] border border-indigo-500/10 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <Network className="w-5 h-5 text-indigo-400" />
+              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest leading-none">Mutualistic Partner</span>
+            </div>
+            
+            {/* Simulation of a linked specimen */}
+            <div className="flex items-center justify-between p-4 bg-white dark:bg-white/5 rounded-2xl border border-indigo-500/10 group cursor-help transition-all hover:bg-indigo-500/5">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                   <Activity className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="block text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-tight">Fungal Mycelium #42</span>
+                  <span className="text-[8px] font-black text-indigo-400/60 uppercase font-black uppercase tracking-widest">Symbiotic Support</span>
+                </div>
+              </div>
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            </div>
+            
+            <p className="text-[9px] text-slate-400 dark:text-white/20 leading-relaxed font-bold italic">
+              Connections within your habitat impact overall system stability. Future updates will allow direct relational anchoring.
+            </p>
           </div>
         </section>
 

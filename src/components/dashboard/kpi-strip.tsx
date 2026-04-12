@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Droplets, ClipboardCheck, Activity } from 'lucide-react';
+import { Droplets, ClipboardCheck, Activity, ShieldCheck, Wifi } from 'lucide-react';
 import { DashboardKPIs } from '@/lib/services/dashboard-stats';
 
 interface KPIStripProps {
@@ -32,17 +32,37 @@ export function KPIStrip({ kpis, onFilterChange, activeFilter }: KPIStripProps) 
     { 
       id: 'health', 
       label: 'Humidity Level', 
-      value: '58%', 
+      value: '58 %', 
       subValue: 'Good',
       icon: Activity, 
       color: 'text-blue-600', 
       bgColor: 'bg-blue-50', 
       borderColor: 'border-blue-100' 
+    },
+    { 
+      id: 'uptime', 
+      label: 'System Uptime', 
+      value: '99.9 %', 
+      subValue: 'Stable',
+      icon: ShieldCheck, 
+      color: 'text-emerald-600', 
+      bgColor: 'bg-emerald-50', 
+      borderColor: 'border-emerald-100' 
+    },
+    { 
+      id: 'latency', 
+      label: 'Sync Latency', 
+      value: '24 ms', 
+      subValue: 'Ops',
+      icon: Wifi, 
+      color: 'text-brand-pink', 
+      bgColor: 'bg-brand-pink/5', 
+      borderColor: 'border-brand-pink/10' 
     }
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-8">
       {items.map((kpi) => (
         <motion.button
           key={kpi.id}

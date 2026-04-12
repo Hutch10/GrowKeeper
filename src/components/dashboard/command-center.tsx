@@ -9,16 +9,17 @@ import {
   Cloud,
   Bell,
   User,
-  CheckCircle2,
-  AlertCircle,
   LogIn
 } from 'lucide-react';
 import { SpecimenSummaryCard } from '../specimens/specimen-summary-card';
 import { ThemeToggle } from '../ui/theme-toggle';
+import { SpecimenListSkeleton } from '../ui/skeleton';
+import { MycelialIllustration } from './mycelial-illustration';
+import { SystemSuggestions } from './system-suggestions';
 import { useSpecimenData } from '@/hooks/use-specimen-data';
 import { useTaskData } from '@/hooks/use-task-data';
 import { aggregateDashboardStats } from '@/lib/services/dashboard-stats';
-import type { BaseSpecimen } from '@/types/specimen';
+import type { Specimen } from '@/types/specimen';
 import type { SpecimenRow } from '@/app/actions/types';
 import type { TaskRow } from '@/app/actions/tasks';
 import { KPIStrip } from './kpi-strip';
@@ -26,6 +27,7 @@ import { DetailRail } from './detail-rail';
 import { ComplianceView } from './compliance-view';
 import { Sidebar } from './sidebar';
 import { TipsSection } from './tips-section';
+import { AdversarialSimulatorTab } from './adversarial-sim-tab';
 import { ComplianceSurface } from '../compliance/compliance-surface';
 import { AddSpecimenForm } from '../plants/add-specimen-form';
 
@@ -38,7 +40,7 @@ export function CommandCenter({
   initialTasks = [],
   errorMessage
 }: { 
-  initialSpecimens?: BaseSpecimen[],
+  initialSpecimens?: Specimen[],
   initialTasks?: TaskRow[],
   errorMessage?: string
 }) {
@@ -51,17 +53,17 @@ export function CommandCenter({
   const { tasks, loading: tasksLoading } = useTaskData(initialTasks);
 
   const stats = useMemo(() => 
-    aggregateDashboardStats(specimens as BaseSpecimen[], tasks),
+    aggregateDashboardStats(specimens as Specimen[], tasks),
   [specimens, tasks]);
 
   const filteredSpecimens = useMemo(() => {
-    const base = (specimens as BaseSpecimen[]);
+    const base = (specimens as Specimen[]);
     if (activeFilter === 'all') return base;
     
     switch (activeFilter) {
       case 'due':
-        const dueIds = tasks.filter(t => !t.completed && t.due_date).map(t => t.specimen_id);
-        return base.filter(s => dueIds.includes(s.id));
+        const dueIds = tasks.filter((t: TaskRow) => !t.completed && t.due_date).map((t: TaskRow) => t.specimen_id);
+        return base.filter((s: Specimen) => dueIds.includes(s.id));
       default:
         return base;
     }
@@ -117,9 +119,9 @@ export function CommandCenter({
               </div>
               <div>
                 <h1 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white leading-none mb-1">
-                  Welcome back to the Registry
+                  Registry Operations
                 </h1>
-                <p className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-[0.2em]">Operational Integrity: Nominal</p>
+                <p className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-[0.2em]">Unified monitoring for biological systems—from spore to canopy</p>
               </div>
             </div>
 
@@ -194,17 +196,19 @@ export function CommandCenter({
             )}
 
             <div className="flex flex-col gap-8">
-              <div className="flex items-center justify-between">
-                <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 dark:text-white/20">
-                  {activeTab === 'inventory' ? 'Plant Overview' : 'Operational Registry'}
-                </h2>
-                {activeTab === 'inventory' && errorMessage && (
-                   <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full">
-                      <AlertCircle className="w-3 h-3 text-red-500" />
-                      <span className="text-[8px] font-black text-red-500 uppercase tracking-widest">Supabase Authentication Error</span>
-                   </div>
-                )}
-              </div>
+                        <p className="max-w-xl mx-auto text-sm font-bold leading-relaxed text-slate-400 dark:text-white/40 italic">
+                           &quot;Unified monitoring for biological systems—from spore to canopy.&quot;
+                        </p>
+                        <div className="flex flex-wrap justify-center gap-4 mt-8">
+                           <div className="flex items-center gap-2 px-4 py-2 border rounded-full bg-slate-950 border-white/5 shadow-2xl">
+                              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500/80">System Uptime: 99.99%</span>
+                           </div>
+                           <div className="flex items-center gap-2 px-4 py-2 border rounded-full bg-slate-950 border-white/5 shadow-2xl">
+                              <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                              <span className="text-[10px] font-black uppercase tracking-widest text-cyan-500/80">Sync Latency: 24ms</span>
+                           </div>
+                        </div>
 
               <AnimatePresence mode="wait">
                 {activeTab === 'inventory' ? (
@@ -216,9 +220,8 @@ export function CommandCenter({
                     className="w-full"
                   >
                     {(specimensLoading || tasksLoading) ? (
-                      <div className="h-64 flex flex-col items-center justify-center bg-white/5 rounded-[3rem] border border-white/5 border-dashed">
-                        <div className="w-12 h-12 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-4" />
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Aggregating Operational Layer...</p>
+                      <div className="space-y-8">
+                        <SpecimenListSkeleton />
                       </div>
                     ) : specimens.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-24 px-12 bg-white dark:bg-white/5 rounded-[3.5rem] border border-dashed border-slate-200 dark:border-white/10 text-center group">
@@ -231,29 +234,27 @@ export function CommandCenter({
                               <p className="text-sm font-bold text-slate-400 dark:text-white/30 max-w-sm mx-auto leading-relaxed">
                                 Could not load specimens from Supabase: <span className="text-red-500">{errorMessage}</span>
                               </p>
-                              <div className="pt-4">
-                                <button className="px-8 py-3 bg-emerald-500 text-black rounded-xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">
-                                   Sign in to Sync
-                                </button>
-                              </div>
                            </div>
                         ) : (
-                           <div className="space-y-4">
-                              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">No Specimens Yet</h3>
-                              <p className="text-sm font-bold text-slate-400 dark:text-white/30 max-w-md mx-auto leading-relaxed">
-                                This sector is currently uninhabited. Add your first specimen to begin biological monitoring.
-                              </p>
-                              <div className="pt-8 flex items-center gap-4">
-                                 <button 
-                                    onClick={() => setIsAddWizardOpen(true)}
-                                    className="px-10 py-4 bg-emerald-500 text-black rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
-                                 >
-                                    Add First Specimen
-                                 </button>
-                                 <button className="px-10 py-4 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 dark:hover:bg-white/10 transition-all">
-                                    Report Issue
-                                 </button>
-                              </div>
+                           <div className="flex flex-col gap-12">
+                              <motion.div 
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-[3.5rem] p-12 shadow-2xl shadow-emerald-900/5 relative overflow-hidden"
+                              >
+                                 <MycelialIllustration />
+                                 
+                                 <div className="flex justify-center gap-6 mt-8 relative z-10">
+                                    <button 
+                                       onClick={() => setIsAddWizardOpen(true)}
+                                       className="px-10 py-4 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-emerald-700 dark:hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20"
+                                    >
+                                       Start First Culture
+                                    </button>
+                                 </div>
+                              </motion.div>
+
+                              <SystemSuggestions onStartWizard={() => setIsAddWizardOpen(true)} />
                            </div>
                         )}
                       </div>
@@ -279,14 +280,24 @@ export function CommandCenter({
                     exit={{ opacity: 0, x: -20 }}
                     className="h-full"
                   >
-                    <ComplianceView />
+                    <ComplianceView specimen={selectedSpecimen || (specimens[0] as SpecimenRow)} />
                   </motion.div>
                 ) : (
-                  <motion.div key="simulation" className="h-[400px] bg-black/5 dark:bg-white/5 rounded-[3rem] border border-slate-100 dark:border-white/5 p-16 flex items-center justify-center text-center backdrop-blur-sm">
-                    <div className="max-w-md text-slate-300">
-                      <Terminal className="w-16 h-16 mx-auto mb-8" />
-                      <h2 className="text-2xl font-black uppercase tracking-[0.3em] mb-4">Adversarial Engine Offline</h2>
+                  <motion.div 
+                    key="simulation" 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="h-full"
+                  >
+                    <div className="mb-6 flex items-center justify-between">
+                       <h3 className="text-sm font-black uppercase tracking-widest text-white/40">Adversarial Engine Core</h3>
+                       <div className="flex items-center gap-2 px-3 py-1 rounded border border-emerald-500/30 bg-emerald-500/10">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Engine Online: Ready for Mission</span>
+                       </div>
                     </div>
+                    <AdversarialSimulatorTab />
                   </motion.div>
                 )}
               </AnimatePresence>

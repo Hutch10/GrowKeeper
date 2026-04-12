@@ -18,7 +18,7 @@ export function normalizeActionError(error: unknown): NormalizedError {
   const rawMessage = typeof err?.message === "string" ? err.message : "";
   const code = typeof err?.code === "string" ? err.code : undefined;
 
-  let friendlyMessage = "An unexpected error occurred. Please try again.";
+  let friendlyMessage = "[CRITICAL] Unexpected operational failure. If this persists, re-authenticate or verify node status.";
   let isRetryable = false;
 
   // 2. Pattern Matching for Known Error Cases
@@ -27,28 +27,28 @@ export function normalizeActionError(error: unknown): NormalizedError {
   if (code) {
     switch (code) {
       case "23505": // Unique constraint violation
-        friendlyMessage = "Nickname collision detected. This specimen identifier already exists in the registry.";
+        friendlyMessage = "[REGISTRY_FAULT] Identity collision detected. This specimen identifier already exists in the ledger.";
         break;
       case "42501": // RLS / Permission denied
-        friendlyMessage = "Security protocol alert: Access denied or insufficient permissions for this operation.";
+        friendlyMessage = "[SECURITY_ALERT] Access denied: This operation was neutralized by the sovereign layer.";
         break;
       case "23503": // Foreign key violation
-        friendlyMessage = "Dependency missing: The referenced resource does not exist.";
+        friendlyMessage = "[DEPENDENCY_FAULT] Missing link: The referenced biological resource does not exist.";
         break;
       case "P0001": // Custom RAISE EXCEPTION
-        friendlyMessage = rawMessage || "Registry policy violation: The action was rejected by the sovereign layer.";
+        friendlyMessage = rawMessage || "[POLICY_VIOLATION] The action was rejected by the RAIS configuration.";
         break;
     }
   }
 
   // Network / Auth Errors
   if (rawMessage.includes("fetch failed")) {
-    friendlyMessage = "Registry transmission failed. Please check your uplink connection.";
+    friendlyMessage = "[SENTINEL] Registry transmission failed. Please check your uplink connection.";
     isRetryable = true;
   }
 
   if (rawMessage.includes("JWT expired") || rawMessage.includes("Auth session missing")) {
-    friendlyMessage = "Protocol expired: Please sign in again to re-authenticate your session.";
+    friendlyMessage = "[PROTOCOL_EXPIRED] Session invalidated: Re-authentication required for registry access.";
   }
 
   return {

@@ -54,7 +54,7 @@ export interface DashboardData {
 export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
   const auth = await getAuthenticatedUser();
 
-  if (!auth.success) {
+  if (!auth.success || !auth.data) {
     return { success: false, data: null, error: "Not signed in" };
   }
 

@@ -142,11 +142,17 @@ export function ComplianceView({ specimen }: ComplianceViewProps) {
                     </div>
                     
                     {event.metadata && (
-                      <div className="mt-3 p-2 bg-black/40 rounded-lg border border-white/5">
-                        <pre className="text-[8px] text-white/60 font-mono whitespace-pre-wrap">
-                          {JSON.stringify(event.metadata, null, 2)}
-                        </pre>
-                      </div>
+                      <details className="mt-3 group/metadata">
+                        <summary className="flex items-center gap-2 text-[8px] font-black text-white/20 uppercase tracking-widest cursor-pointer hover:text-emerald-400 transition-colors list-none">
+                          <div className="w-1.5 h-1.5 border-t border-r border-current rotate-45 group-open/metadata:rotate-[135deg] transition-transform" />
+                          View Attestation Metadata
+                        </summary>
+                        <div className="mt-2 p-2 bg-black/40 rounded-lg border border-white/5">
+                          <pre className="text-[8px] text-white/60 font-mono罩 whitespace-pre-wrap">
+                            {JSON.stringify(event.metadata, null, 2)}
+                          </pre>
+                        </div>
+                      </details>
                     )}
                   </div>
                 </div>

@@ -4,10 +4,10 @@ import Image from "next/image";
 import { Heart, Star, ShoppingCart, Zap, Loader2, ShieldCheck, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { marketplace } from "@/lib/services/marketplace";
-import type { BaseSpecimen } from "@/types/specimen";
+import type { Specimen } from "@/types/specimen";
 
 interface MarketplacePreviewProps {
-  specimen?: BaseSpecimen;
+  specimen?: Specimen;
   isLoading?: boolean;
 }
 
@@ -34,7 +34,7 @@ export function MarketplacePreview({ specimen, isLoading }: MarketplacePreviewPr
   const handleAcquire = async () => {
     setIsPurchasing(true);
     try {
-      await marketplace.purchaseSpecimen(specimen?.id || defaultAsset.id, "GK-CORE-001", specimen as unknown as BaseSpecimen);
+      await marketplace.purchaseSpecimen(specimen?.id || defaultAsset.id, "GK-CORE-001", specimen as unknown as Specimen);
       alert("Asset ownership transferred to Sovereign Wallet.");
     } catch (err) {
       console.error("Acquisition failed:", err);

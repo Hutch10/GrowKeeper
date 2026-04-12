@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useMemo } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { BaseSpecimen } from '@/types/specimen';
+import { Specimen } from '@/types/specimen';
 import { TaskRow } from '@/app/actions/tasks';
 
 interface SpecimenSummaryCardProps {
-  specimen: BaseSpecimen;
+  specimen: Specimen;
   tasks?: TaskRow[];
   onClick: () => void;
   active?: boolean;
@@ -38,10 +39,12 @@ export const SpecimenSummaryCard: React.FC<SpecimenSummaryCardProps> = ({
           ? 'border-emerald-500 shadow-emerald-500/30 scale-[1.03]' 
           : 'border-white dark:border-white/5 shadow-slate-200/50 dark:shadow-black/20 hover:border-emerald-500/40'
       }`}>
-        <img 
+        <Image 
           src={specimen.image_url || `https://images.unsplash.com/photo-1545241047-6083a3684587?auto=format&fit=crop&q=80&w=800`} 
           alt={specimen.nickname}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          fill
+          unoptimized
+          className="object-cover transition-transform duration-700 group-hover:scale-110"
         />
         
         {/* Vitality Overlay */}

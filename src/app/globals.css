@@ -153,3 +153,7 @@ html {
 .dynamic-width {
   width: var(--w, 0);
 }
+
+.step-progress-bar {
+  width: var(--progress-width, 0%);
+}

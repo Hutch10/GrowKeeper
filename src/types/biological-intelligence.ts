@@ -1,9 +1,17 @@
-export type KingdomType = 'Botanical' | 'Mycology' | 'Animalia';
+import { Json } from "./database";
 
-export interface BaseBiologicalSpecimen {
+export type KingdomType = 'Plantae' | 'Fungi' | 'Animalia' | 'Other';
+
+/**
+ * Atomic Biological Specimen (v2.3.9)
+ * Unified structure for all biological entities to ensure 100% type reliability.
+ */
+export interface BiologicalSpecimen {
   id: string;
   user_id?: string | null;
   nickname: string;
+  kingdom: KingdomType;
+  genus?: string | null;
   species_name?: string | null;
   notes?: string | null;
   image_url?: string | null;
@@ -26,10 +34,26 @@ export interface BaseBiologicalSpecimen {
   lat?: number | null;
   lon?: number | null;
   custodian_id?: string | null;
-}
+  last_action_type?: string | null;
+  source?: string | null;
+  acquisition_date?: string | null;
+  status?: string | null;
+  zk_proof?: string | null;
+  offspring_count?: number | null;
+  last_valuation?: number | null;
+  loan_amount?: number | null;
+  collateral_ratio?: number | null;
+  privacy_level?: 'PUBLIC' | 'PRIVATE' | 'MASKED' | 'STEALTH' | null;
+  target_temp_range?: [number, number] | null;
+  target_humidity_range?: [number, number] | null;
+  is_insured?: boolean | null;
+  insurance_policy_id?: string | null;
+  region?: string | null;
+  nonce?: number | null;
+  version_vector?: Record<string, number> | null;
+  public_key?: string | null;
 
-export interface BotanicalSpecimen extends BaseBiologicalSpecimen {
-  kingdom: 'Botanical';
+  // Kingdom-Specific (Optional Bridge)
   moisture_level?: number | null;
   light_level?: number | null;
   temp_c?: number | null;
@@ -37,34 +61,28 @@ export interface BotanicalSpecimen extends BaseBiologicalSpecimen {
   watering?: string | null;
   fertilizer?: string | null;
   light?: string | null;
-}
-
-export interface MycologySpecimen extends BaseBiologicalSpecimen {
-  kingdom: 'Mycology';
   substrate?: string | null;
   misting_schedule?: string | null;
   humidity_level?: number | null;
-  temp_c?: number | null;
-}
-
-export interface AnimaliaSpecimen extends BaseBiologicalSpecimen {
-  kingdom: 'Animalia';
   heart_rate?: number | null;
   activity_level?: number | null;
   dietary_notes?: string | null;
-  temp_c?: number | null;
 }
 
-export type BiologicalSpecimen = BotanicalSpecimen | MycologySpecimen | AnimaliaSpecimen;
-
-// Bridge type for legacy services that expect all possible properties
-export type CompleteSpecimen = BaseBiologicalSpecimen & Partial<BotanicalSpecimen & MycologySpecimen & AnimaliaSpecimen>;
+export type CompleteSpecimen = BiologicalSpecimen;
+export type BotanicalSpecimen = BiologicalSpecimen & { kingdom: 'Plantae' };
+export type MycologySpecimen = BiologicalSpecimen & { kingdom: 'Fungi' };
+export type AnimaliaSpecimen = BiologicalSpecimen & { kingdom: 'Animalia' };
 
 export interface AuditEvent {
   id: string;
   created_at: string;
   user_id: string | null;
+  specimen_id?: string | null;
   event_type: string;
-  metadata: Record<string, unknown> | null;
-  route: string | null;
+  notes?: string | null;
+  source_type?: string | null;
+  confidence?: number | null;
+  metadata: Json | null;
+  route?: string | null;
 }

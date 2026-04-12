@@ -5,13 +5,13 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Heart, Leaf, Waves, Shield, Loader2, Zap, MapPin, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { Kingdom, BaseSpecimen } from "@/types/specimen";
+import type { Kingdom, Specimen } from "@/types/specimen";
 import { useSpecimenData } from "@/hooks/use-specimen-data";
 import { checkLegalStatus } from "@/lib/geofencing";
 
 interface SpecimenSummaryCardProps {
   id?: string;
-  specimen?: BaseSpecimen; // Optional: can be passed in or fetched by ID
+  specimen?: Specimen; // Optional: can be passed in or fetched by ID
   nickname?: string;
   species_name?: string | null;
   image_url?: string | null;
@@ -44,7 +44,7 @@ export function SpecimenSummaryCard({
   }, []);
   
   // Use propSpecimen if provided, otherwise fetch by ID
-  const specimen = propSpecimen ?? (specimens.find(s => s.id === id) as BaseSpecimen);
+  const specimen = propSpecimen ?? (specimens.find(s => s.id === id) as Specimen);
   
   if (dataLoading && !propSpecimen) {
     return (
@@ -176,7 +176,9 @@ export function SpecimenSummaryCard({
           <div className="flex items-center gap-2">
             <span className="text-[9px] text-white/30 font-black uppercase tracking-widest truncate">{displaySpecies || "UNIDENTIFIED"}</span>
             <div className="h-1 w-1 rounded-full bg-white/10" />
-            <span className="text-[9px] text-brand-green/60 font-black tracking-widest uppercase">{kingdom}</span>
+            <span className="text-[9px] text-brand-green/60 font-black tracking-widest uppercase">
+              {kingdom === "Plantae" ? "Botanical" : kingdom === "Fungi" ? "Mycology" : kingdom}
+            </span>
           </div>
           
           <div className="flex items-center gap-3">

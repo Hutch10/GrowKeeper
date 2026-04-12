@@ -9,13 +9,15 @@ const anthropic = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   : null;
 
+import type { SpecimenRow, EventRow } from "@/app/actions/types";
+
 export interface AgentResponse {
   analysis: string;
   proposed_actions: Array<{
     type: string;
     priority: "low" | "medium" | "high" | "critical";
     reasoning: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }>;
   confidence: number;
 }
@@ -31,7 +33,7 @@ export abstract class SpecialistAgent {
   /**
    * Executes an agentic analysis cycle with biological grounding.
    */
-  async analyze(specimen: any, events: any[]): Promise<AgentResponse> {
+  async analyze(specimen: SpecimenRow, events: EventRow[]): Promise<AgentResponse> {
     if (!anthropic) {
       logger.warn('AgentBridge', `Anthropic not initialized for ${this.name}. Falling back.`);
       return this.getFallbackResponse();
@@ -50,8 +52,8 @@ export abstract class SpecialistAgent {
       const msg = await anthropic.messages.create({
         model: "claude-3-5-sonnet-20240620",
         max_tokens: 1024,
-        system: `${this.systemPrompt}\n\nBIOLOGICAL GROUNDING:\n- Current Moisture: ${Math.round(projectedState.moisture * 100)}%\n- Vitality Trend: ${projectedState.vitalityTrend}\n- Active Constraints: ${constraints.violations.join(', ') || 'None'}`,
-        messages: [{ role: "user", content: `Analyze the lifecycle of specimen: ${specimen.nickname}` }],
+        system: `${this.systemPrompt}\n\nBIOLOGICAL GROUNDING:\n- Specimen: ${specimen.nickname} (${specimen.kingdom})\n- Current Moisture: ${Math.round(projectedState.moisture * 100)}%\n- Vitality Trend: ${projectedState.vitalityTrend}\n- Active Constraints: ${constraints.violations.join(', ') || 'None'}`,
+        messages: [{ role: "user", content: `Analyze the lifecycle of specimen: ${specimen.nickname}. Provide industrial-grade care optimization.` }],
       });
 
       // Simple parsing logic (Phase 5 agents will return structured text to be parsed)

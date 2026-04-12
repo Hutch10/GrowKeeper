@@ -18,7 +18,9 @@ export function SovereigntyHub() {
     const fetchData = async () => {
       // Fetch local specimens for stats
       const result = await specimensDB.allDocs({ include_docs: true });
-      const docs = result.rows.map(r => fromPouch<SpecimenRow>(r.doc));
+      const docs = result.rows
+        .filter(r => !!r.doc)
+        .map(r => fromPouch<SpecimenRow>(r.doc));
       setSpecimens(docs);
 
       // Fetch audit log

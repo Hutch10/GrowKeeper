@@ -14,6 +14,7 @@ export interface TreatmentTask {
   actionRequired: string;
   approvalRequired: boolean;
   createdAt: string;
+  [key: string]: unknown;
 }
 
 class TreatmentProtocolService {
@@ -23,18 +24,19 @@ class TreatmentProtocolService {
   async generateProtocols(diagnosis: DiagnosisResult, specimenId: string): Promise<TreatmentTask[]> {
     logger.info('Governance', `Generating autonomous remediation swarm for ${specimenId}`);
     
-    const tasks: TreatmentTask[] = diagnosis.issues.map(issue => {
-      const isCritical = issue.severity === 'high';
+    const tasks: TreatmentTask[] = diagnosis.likelyCauses.map(issue => {
+      const priority: "high" | "medium" | "low" = issue.probability > 0.6 ? "high" : issue.probability > 0.3 ? "medium" : "low";
+      const isCritical = priority === 'high';
       
       return {
         id: `task_${Math.random().toString(36).substring(7)}`,
         specimenId,
-        type: issue.type,
-        name: issue.name,
-        priority: issue.severity,
+        type: issue.treatment_category,
+        name: issue.cause,
+        priority,
         status: "pending",
-        description: issue.description,
-        actionRequired: issue.treatment,
+        description: `Potential Issue: ${issue.cause} (${Math.round(issue.probability * 100)}% confidence)`,
+        actionRequired: issue.remediation_protocol,
         approvalRequired: isCritical, // Higher severity requires human-in-the-loop
         createdAt: new Date().toISOString()
       };

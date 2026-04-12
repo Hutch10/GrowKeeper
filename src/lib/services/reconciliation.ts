@@ -47,7 +47,7 @@ export class ReconciliationService {
       return local; // Preserve local canonical state
     }
 
-    const causality = this.compareVectors(local.version_vector, remote.version_vector);
+    const causality = this.compareVectors(local.version_vector || undefined, remote.version_vector || undefined);
 
     switch (causality) {
       case 'remote':

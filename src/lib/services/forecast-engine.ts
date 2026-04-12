@@ -1,10 +1,8 @@
 import { addHours, subHours, formatISO } from 'date-fns';
-import type { Database } from '@/types/database';
+import { BiologicalSpecimen } from '@/types/biological-intelligence';
 import { WeatherData } from '@/app/actions/weather';
 import { deriveSpecimenState, ProjectedState } from './biological-engine';
 import { getNormsForSpecies } from '../constants/biological-norms';
-
-type SpecimenRow = Database["public"]["Tables"]["specimens"]["Row"];
 
 export interface ForecastResult {
   trend: number; // -100 to 100
@@ -24,7 +22,7 @@ export interface ForecastResult {
  * Integrates biological norms with event-sourced state derivation.
  */
 export function calculateForecast(
-  specimen: SpecimenRow,
+  specimen: BiologicalSpecimen,
   weather?: WeatherData | null
 ): ForecastResult {
   const now = new Date();
@@ -36,7 +34,7 @@ export function calculateForecast(
   });
 
   // 2. Fetch Biological Norms (Phase 2 Determinism)
-  const norms = getNormsForSpecies(specimen.species_name);
+  const norms = getNormsForSpecies(specimen.species_name ?? null);
 
   // 3. Vitality Trend Calculation
   const trend = state.vitalityTrend === 'OPTIMIZING' ? 15 : 
@@ -62,7 +60,7 @@ export function calculateForecast(
   const simulatedHistory = Array.from({ length: 24 }).map((_, i) => {
     const ts = subHours(now, (23 - i) * 2);
     const baseMoisture = state.moisture;
-    const baseTemp = specimen.temp_c || 21;
+    const baseTemp = (specimen.temp_c as number) || 21;
     
     return {
       timestamp: formatISO(ts),

@@ -173,7 +173,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                   id={specimen.id}
                   nickname={specimen.nickname}
                   species_name={specimen.species_name}
-                  kingdom={specimen.kingdom as "Plantae" | "Fungi" | "Animalia" | "Other"}
+                  kingdom={specimen.kingdom}
                   isActive={selectedSpecimenId === specimen.id}
                   onClick={() => setSelectedSpecimenId(specimen.id)}
                   compliance_status={specimen.compliance_status}

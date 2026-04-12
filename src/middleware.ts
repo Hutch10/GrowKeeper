@@ -10,6 +10,7 @@ export async function middleware(request: NextRequest) {
     // Core Allowed Routes
     const isAllowed = 
       pathname === '/' ||
+      pathname === '/genesis' ||
       pathname.startsWith('/auth') ||
       pathname.startsWith('/dashboard') ||
       pathname.startsWith('/plants') ||

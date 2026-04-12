@@ -91,7 +91,7 @@ export function InvestorView({ specimens }: InvestorViewProps) {
         />
         <KPIItem
           icon={TrendingUp}
-          label="Botanical ROA"
+          label="Biological ROA"
           value={`${roa}%`}
           trend="Institutional"
           color="text-blue-600"
@@ -134,7 +134,7 @@ export function InvestorView({ specimens }: InvestorViewProps) {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-2xl font-black mb-1">Asset Appreciation</h3>
-                <p className="text-white/40 text-xs font-bold uppercase tracking-widest">Biological Growth vs Market Value</p>
+                <p className="text-white/40 text-xs font-bold uppercase tracking-widest">Biological Performance vs Market Value</p>
               </div>
               <div className="flex gap-2">
                 <span className="px-3 py-1 bg-white/10 rounded-lg text-[10px] font-black uppercase tracking-tighter">12 Months</span>
@@ -173,8 +173,8 @@ export function InvestorView({ specimens }: InvestorViewProps) {
             </div>
           </div>
           <div className="w-full space-y-4">
-            <DiversificationItem label="Rare Botany" percentage={65} color="bg-emerald-500" />
-            <DiversificationItem label="Premium Fungi" percentage={25} color="bg-amber-500" />
+            <DiversificationItem label="Plantae Sector" percentage={65} color="bg-emerald-500" />
+            <DiversificationItem label="Fungi Networks" percentage={25} color="bg-amber-500" />
             <DiversificationItem label="L2 Escrow" percentage={10} color="bg-brand-pink" />
           </div>
         </div>

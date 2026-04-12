@@ -1,4 +1,4 @@
-import { BaseSpecimen } from "@/types/specimen";
+import { Specimen } from "@/types/specimen";
 import { TaskRow } from "@/app/actions/tasks";
 import { checkLegalStatus } from "@/lib/geofencing";
 
@@ -33,7 +33,7 @@ export interface DashboardStats {
  * Aggregates specimens and tasks into actionable dashboard intelligence.
  */
 export function aggregateDashboardStats(
-  specimens: BaseSpecimen[],
+  specimens: Specimen[],
   tasks: TaskRow[]
 ): DashboardStats {
   const now = new Date();
@@ -41,9 +41,9 @@ export function aggregateDashboardStats(
   const todayEnd = new Date(now.setHours(23, 59, 59, 999));
 
   // 1. Compute KPIs
-  const incomplete = specimens.filter(s => !s.species_name || s.lat === undefined || s.lon === undefined).length;
+  const incomplete = specimens.filter(s => !s.species_name || s.lat === null || s.lon === null).length;
   const flaggedSpecimens = specimens.filter(s => {
-    if (s.lat !== undefined && s.lon !== undefined) {
+    if (s.lat !== null && s.lat !== undefined && s.lon !== null && s.lon !== undefined) {
       return checkLegalStatus(s.lon, s.lat).status !== 'safe';
     }
     return false;
@@ -96,7 +96,7 @@ export function aggregateDashboardStats(
   });
 
   // 2.3 Incomplete Data
-  specimens.filter(s => !s.species_name || s.lat === undefined).forEach(s => {
+  specimens.filter(s => !s.species_name || s.lat === null || s.lat === undefined).forEach(s => {
     priorityQueue.push({
       id: `inc-${s.id}`,
       type: 'INCOMPLETE',

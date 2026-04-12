@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { aggregateDashboardStats } from './dashboard-stats';
-import { BaseSpecimen } from '@/types/specimen';
+import { Specimen } from '@/types/specimen';
 import { TaskRow } from '@/app/actions/tasks';
 
 describe('aggregateDashboardStats', () => {
-  const mockSpecimens: BaseSpecimen[] = [
+  const mockSpecimens: Specimen[] = [
     {
       id: 's1',
       nickname: 'Healthy Plant',
@@ -75,7 +75,7 @@ describe('aggregateDashboardStats', () => {
   });
 
   it('identifies incomplete records', () => {
-    const incompleteSpecimen: BaseSpecimen = {
+    const incompleteSpecimen: Specimen = {
       id: 's3',
       nickname: 'Mystery',
       kingdom: 'Plantae',

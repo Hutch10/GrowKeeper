@@ -3,11 +3,11 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateSpecimen } from "@/app/actions/specimen-actions";
-import type { BaseSpecimen } from "@/types/specimen";
+import type { Specimen } from "@/types/specimen";
 import { Shield, Zap, Info } from "lucide-react";
 
 interface EditSpecimenFormProps {
-  specimen: BaseSpecimen;
+  specimen: Specimen;
   onCancel: () => void;
   onSuccess: () => void;
 }
