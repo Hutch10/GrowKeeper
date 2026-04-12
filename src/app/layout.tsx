@@ -62,6 +62,8 @@ export default async function RootLayout({
 
   const auth = await getAuthenticatedUser();
 
+  const isDashboard = true; // Placeholder or check path if possible in server component
+
   return (
     <html lang="en">
       <body
@@ -70,30 +72,33 @@ export default async function RootLayout({
         <ThemeProvider>
           <SyncStatusProvider>
             <CommandPalette />
-            <header className="border-b border-brand-pink/30 bg-white sticky top-0 z-40">
-              <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-3">
-                <div className="flex items-center gap-4">
-                  <Link href="/" className="text-sm font-bold text-brand-dark hover:text-brand-pink transition-colors">
-                    GrowKeeper
-                  </Link>
-                  <SyncStatusIndicator />
-                </div>
-                {auth.success ? (
-                  <UserMenu email={auth.data.email} />
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-brand-dark/50 font-medium">Not signed in</span>
-                    <Link
-                      href="/auth"
-                      className="rounded-md border border-brand-pink/30 px-3 py-1.5 text-sm font-semibold text-brand-dark/70 hover:bg-brand-pink-light/50 transition-colors"
-                    >
-                      Sign in
+            {/* ENTRANCE HARDENING: Generic header is suppressed in Registry Mode */}
+            {!(process.env.NEXT_PUBLIC_ALPHA_LOCKDOWN === 'true') && (
+              <header className="border-b border-brand-pink/30 bg-white sticky top-0 z-40">
+                <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-3">
+                  <div className="flex items-center gap-4">
+                    <Link href="/" className="text-sm font-bold text-brand-dark hover:text-brand-pink transition-colors">
+                      GrowKeeper
                     </Link>
+                    <SyncStatusIndicator />
                   </div>
-                )}
-              </div>
-            </header>
-            <main className="min-h-[calc(100vh-57px)]">
+                  {auth.success ? (
+                    <UserMenu email={auth.data.email} />
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-brand-dark/50 font-medium">Not signed in</span>
+                      <Link
+                        href="/auth"
+                        className="rounded-md border border-brand-pink/30 px-3 py-1.5 text-sm font-semibold text-brand-dark/70 hover:bg-brand-pink-light/50 transition-colors"
+                      >
+                        Sign in
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </header>
+            )}
+            <main className={process.env.NEXT_PUBLIC_ALPHA_LOCKDOWN === 'true' ? "h-screen" : "min-h-[calc(100vh-57px)]"}>
               {children}
             </main>
             <FeedbackButton />

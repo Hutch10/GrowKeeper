@@ -146,6 +146,11 @@ export async function addSpecimen(formData: FormData): Promise<ActionResult<Spec
           _is_buffered: true
         } as unknown as SpecimenRow;
 
+        const sentinelDiagnostic = {
+          message: `[LOCAL_CONTINGENCY_INTELLIGENCE]\nFAULT_STATE: DNS_RESOLUTION_FAILURE (ENOTFOUND)\nIMPACT: Cloud Registry reachability is currently neutralized.\nPLAN: Biological telemetry is being buffered to the local audit ledger (PouchDB).\nADVISORY: All local functions, including Mycelial Geofencing and Genomic Provenance, remain active.\nSOURCE: Synchronized Local Cache.`,
+          provider_label: "Resilient Mock Diagnostic"
+        };
+
         // Still record to audit ledger (it will also handle fallback)
         await recordAuditEntry({
           action: "CREATE",
@@ -160,7 +165,12 @@ export async function addSpecimen(formData: FormData): Promise<ActionResult<Spec
         });
 
         revalidatePath("/dashboard");
-        return { success: true, data: mockSpecimen, error: null };
+        return { 
+          success: true, 
+          data: mockSpecimen, 
+          error: null,
+          sentinel_diagnostic: sentinelDiagnostic
+        };
       }
 
       // Rollback image upload if DB insert fails

@@ -5,8 +5,12 @@ import { useState, useEffect, useCallback } from 'react';
 export interface LogEntry {
   id: string;
   timestamp: Date;
-  type: 'system' | 'event' | 'warn' | 'error';
+  type: 'system' | 'event' | 'warn' | 'error' | 'sentinel';
   message: string;
+  metadata?: {
+    provider_label?: string;
+    fault_code?: string;
+  };
 }
 
 // Global state for logs (simulated for now, could be an event bus)

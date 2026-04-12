@@ -21,5 +21,21 @@ export interface SpecimenActionPayload {
 }
 
 export type ActionResult<T = void> = 
-  | { success: true; data: T; error?: string | null }
-  | { success: false; data: null; error: string };
+  | { 
+      success: true; 
+      data: T; 
+      error?: string | null; 
+      sentinel_diagnostic?: {
+        message: string;
+        provider_label: string;
+      };
+    }
+  | { 
+      success: false; 
+      data: null; 
+      error: string; 
+      sentinel_diagnostic?: {
+        message: string;
+        provider_label: string;
+      };
+    };

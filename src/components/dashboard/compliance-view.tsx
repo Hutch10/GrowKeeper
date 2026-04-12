@@ -30,6 +30,8 @@ export function ComplianceView({ specimen }: ComplianceViewProps) {
 
   // Simulated Audit Ledger Fetch
   useEffect(() => {
+    if (!specimen) return;
+
     // In a real implementation, this would fetch from the `alpha_events` table in Supabase
     const mockEvents: AuditEvent[] = [
       {
@@ -59,6 +61,20 @@ export function ComplianceView({ specimen }: ComplianceViewProps) {
     ];
     setEvents(mockEvents);
   }, [specimen]);
+
+  if (!specimen) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-12 bg-black/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] text-center">
+        <div className="p-6 bg-white/5 rounded-3xl border border-white/10 mb-6">
+          <Database className="w-12 h-12 text-white/20" />
+        </div>
+        <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-2">No Active Specimen Selected</h2>
+        <p className="text-xs font-black text-white/40 uppercase tracking-widest max-w-xs leading-relaxed">
+          The sovereign compliance surface requires a valid registry anchor to perform an audit trace.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-black/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">

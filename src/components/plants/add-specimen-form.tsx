@@ -219,10 +219,24 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
       const result = await performAdd(formData as FormData);
 
       if (result.success) {
-        toast.success("Specimen successfully anchored to the Sovereign Registry.");
+        if (result.sentinel_diagnostic) {
+          addLog(result.sentinel_diagnostic.message, 'sentinel', {
+            // @ts-ignore - Handle metadata
+            provider_label: result.sentinel_diagnostic.provider_label
+          });
+          toast.info("Registry anchored in Resilient Mode. Sentinel Diagnostic interjected.");
+        } else {
+          toast.success("Specimen successfully anchored to the Sovereign Registry.");
+        }
         onClose?.();
         router.refresh();
       } else {
+        if (result.sentinel_diagnostic) {
+           addLog(result.sentinel_diagnostic.message, 'sentinel', {
+             // @ts-ignore - Handle metadata
+             provider_label: result.sentinel_diagnostic.provider_label
+           });
+        }
         setError(result.error || "Failed to add specimen.");
       }
     } catch (err: unknown) {

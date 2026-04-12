@@ -14,26 +14,24 @@ import {
   RefreshCw,
   Award,
   Navigation,
-  X
+  X,
+  ShieldAlert,
+  ClipboardList
 } from "lucide-react";
 import { SystemLogTerminal } from "@/components/dashboard/system-log-terminal";
 
 const NAV_ITEMS_ALL = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+  { icon: LayoutDashboard, label: "Registry Dashboard", id: "inventory" },
+  { icon: ShieldAlert, label: "Simulation Engine", id: "simulation" },
+  { icon: ClipboardList, label: "Compliance Surface", id: "compliance" },
   { icon: Navigation, label: "Field Instrument", href: "/field" },
   { icon: Leaf, label: "My Specimens", href: "/plants" },
-  { icon: Lightbulb, label: "Care Tips", href: "/care-tips" },
-  { icon: Library, label: "Specimen Library", href: "/library" },
   { icon: CheckSquare, label: "Tasks", href: "/tasks", badge: 3 },
-  { icon: Users, label: "Community", href: "/community/profile/guest-user" },
-  { icon: RefreshCw, label: "Swap Board", href: "/community/swap" },
-  { icon: Award, label: "Premium Ops", href: "/settings/billing" },
-  { icon: Settings, label: "Settings", href: "/settings" },
-  { icon: HelpCircle, label: "Support", href: "/support" },
+  { icon: Settings, label: "Settings", id: "settings" },
 ];
 
 const IS_LOCKDOWN = process.env.NEXT_PUBLIC_ALPHA_LOCKDOWN === 'true';
-const ALLOWED_LABELS = ["Dashboard", "My Specimens", "Tasks", "Settings"];
+const ALLOWED_LABELS = ["Registry Dashboard", "Simulation Engine", "Compliance Surface", "My Specimens", "Tasks", "Settings"];
 
 const NAV_ITEMS = IS_LOCKDOWN 
   ? NAV_ITEMS_ALL.filter(item => ALLOWED_LABELS.includes(item.label))
@@ -43,9 +41,11 @@ interface SidebarProps {
   className?: string;
   isOpen?: boolean;
   onClose?: () => void;
+  activeTab?: string;
+  onTabChange?: (id: string) => void;
 }
 
-export function Sidebar({ className, isOpen, onClose }: SidebarProps) {
+export function Sidebar({ className, isOpen, onClose, activeTab, onTabChange }: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -72,17 +72,10 @@ export function Sidebar({ className, isOpen, onClose }: SidebarProps) {
 
       <nav className="flex-1 space-y-2">
         {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={`flex items-center justify-between px-3 py-3 rounded-xl transition-all group ${
-                isActive 
-                  ? "bg-white/20 shadow-lg" 
-                  : "hover:bg-white/10"
-              }`}
-            >
+          // @ts-ignore - Handle hybrid items
+          const isActive = activeTab === item.id || pathname === item.href;
+          const content = (
+            <>
               <div className="flex items-center gap-3">
                 <item.icon className={`w-5 h-5 transition-colors ${
                   isActive ? "text-white" : "text-white/60 group-hover:text-white"
@@ -98,7 +91,38 @@ export function Sidebar({ className, isOpen, onClose }: SidebarProps) {
                   {item.badge}
                 </span>
               )}
-            </Link>
+            </>
+          );
+
+          if (item.href) {
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`flex items-center justify-between px-3 py-3 rounded-xl transition-all group ${
+                  isActive 
+                    ? "bg-white/20 shadow-lg" 
+                    : "hover:bg-white/10"
+                }`}
+              >
+                {content}
+              </Link>
+            );
+          }
+
+          return (
+            <button
+              key={item.label}
+              // @ts-ignore - Handle hybrid items
+              onClick={() => onTabChange?.(item.id)}
+              className={`w-full flex items-center justify-between px-3 py-3 rounded-xl transition-all group ${
+                isActive 
+                  ? "bg-white/20 shadow-lg" 
+                  : "hover:bg-white/10"
+              }`}
+            >
+              {content}
+            </button>
           );
         })}
       </nav>

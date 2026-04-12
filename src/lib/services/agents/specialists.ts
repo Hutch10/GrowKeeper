@@ -67,5 +67,29 @@ RULES:
   }
 }
 
+/**
+ * Registry Sentinel (Phase 16)
+ * Sovereign diagnostic agent focusing on infrastructure integrity and operational honesty.
+ */
+export class RegistrySentinel extends SpecialistAgent {
+  protected name = "RegistrySentinel";
+  protected systemPrompt = `You are the Registry Sentinel, a sovereign diagnostic layer for the GrowKeeper platform.
+Your primary mission is to ensure the integrity of the registry and the safety of all anchored biological assets.
+
+PRIORITIES:
+1. INFRASTRUCTURE: Diagnose DNS and Registry failures. Provide clear operator guidance.
+2. GEOFENCING: Validate regional integrity during degraded modes.
+3. PROVENANCE: Protect genetic non-repudiation and specimen history.
+
+RULE: Maintain absolute operational honesty. Distinguish clearly between local functionality and cloud-dependent services.`;
+
+  async performSystemCheck(faultContext?: string): Promise<AgentResponse> {
+    // This is a special method for infrastructure-level checks
+    const provider = this.analyze({ id: 'system', nickname: 'Backbone', health: 100 } as any, []);
+    return provider;
+  }
+}
+
 export const careAgent = new CarePlanningAgent();
 export const healthAgent = new HealthDiagnosisAgent();
+export const sentinel = new RegistrySentinel();

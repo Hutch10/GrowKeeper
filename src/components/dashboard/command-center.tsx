@@ -25,7 +25,7 @@ import type { TaskRow } from '@/app/actions/tasks';
 import { KPIStrip } from './kpi-strip';
 import { DetailRail } from './detail-rail';
 import { ComplianceView } from './compliance-view';
-import { Sidebar } from './sidebar';
+import { Sidebar } from '../layout/sidebar';
 import { TipsSection } from './tips-section';
 import { AdversarialSimulatorTab } from './adversarial-sim-tab';
 import { ComplianceSurface } from '../compliance/compliance-surface';
@@ -114,22 +114,33 @@ export function CommandCenter({
         <header className="flex items-center justify-between px-12 py-8 transition-colors duration-500">
           <div className="flex items-center gap-12">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center border border-amber-200">
-                <Sun className="w-5 h-5 text-amber-600" />
+              <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20">
+                <Sun className="w-5 h-5 text-emerald-500" />
               </div>
               <div>
                 <h1 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white leading-none mb-1">
                   Registry Operations
                 </h1>
-                <p className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-[0.2em]">Unified monitoring for biological systems—from spore to canopy</p>
+                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] animate-pulse">Alpha Pilot Ready</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-6 text-[11px] font-bold text-slate-400">
-              <div className="flex items-center gap-2">
-                <Cloud className="w-4 h-4" />
-                <span>12:47 PM • Sunny | 75°F</span>
-              </div>
+            <div className="hidden lg:flex items-center gap-8">
+               <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">System Uptime</span>
+                  <div className="flex items-center gap-2">
+                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                     <span className="text-xs font-black text-slate-900 dark:text-white tracking-tighter">99.99%</span>
+                  </div>
+               </div>
+               <div className="w-[1px] h-6 bg-slate-200 dark:bg-white/10" />
+               <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Sync Latency</span>
+                  <div className="flex items-center gap-2">
+                     <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
+                     <span className="text-xs font-black text-slate-900 dark:text-white tracking-tighter">24ms</span>
+                  </div>
+               </div>
             </div>
           </div>
 

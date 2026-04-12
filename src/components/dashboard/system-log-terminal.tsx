@@ -93,12 +93,21 @@ export function SystemLogTerminal() {
               className={`flex gap-3 items-start leading-relaxed ${
                 log.type === 'warn' ? 'text-amber-400' : 
                 log.type === 'error' ? 'text-red-400' : 
-                log.type === 'event' ? 'text-emerald-400' : 'text-emerald-500/80'
+                log.type === 'event' ? 'text-emerald-400' : 
+                log.type === 'sentinel' ? 'text-white border-l-2 border-brand-pink pl-3 py-1 bg-brand-pink/5' :
+                'text-emerald-500/80'
               }`}
-              style={{ textShadow: '0 0 10px currentColor' }}
+              style={{ textShadow: log.type === 'sentinel' ? 'none' : '0 0 10px currentColor' }}
             >
               <span className="opacity-30 shrink-0">[{log.timestamp.toLocaleTimeString([], { hour12: false })}]</span>
-              <span className="break-all">{log.message}</span>
+              <div className="flex flex-col gap-1">
+                {log.type === 'sentinel' && (
+                  <span className="text-[8px] font-black text-brand-pink uppercase tracking-widest mb-1">
+                    {log.metadata?.provider_label || 'Registry Sentinel'}
+                  </span>
+                )}
+                <span className="break-all whitespace-pre-wrap">{log.message}</span>
+              </div>
             </motion.div>
           ))}
         </AnimatePresence>

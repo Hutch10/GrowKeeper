@@ -46,6 +46,8 @@ export function ComplianceSurface({ specimen, onClose }: ComplianceSurfaceProps)
   const [verificationPassed, setVerificationPassed] = useState<boolean | null>(null);
 
   useEffect(() => {
+    if (!specimen) return;
+    
     // Simulate fetching audit trail from alpha_events
     setAuditTrail([
       {
@@ -61,7 +63,7 @@ export function ComplianceSurface({ specimen, onClose }: ComplianceSurfaceProps)
         }
       }
     ]);
-  }, [specimen.id]);
+  }, [specimen?.id]);
 
   const runVerification = async () => {
     setIsVerifying(true);
