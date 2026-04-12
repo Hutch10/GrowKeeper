@@ -256,9 +256,9 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
-                { id: "Plantae", title: "Plantae", desc: "Botanical Species", icon: Leaf, color: "bg-emerald-500 text-black", border: "border-emerald-500/20" },
-                { id: "Fungi", title: "Fungi", desc: "Mycelial Networks", icon: Flower2, color: "bg-amber-400 text-black", border: "border-amber-400/20" },
-                { id: "Animalia", title: "Animalia", desc: "Fauna & Wildlife", icon: Heart, color: "bg-rose-400 text-black", border: "border-rose-400/20" }
+                { id: "Plantae", title: "Botanical", desc: "Plantae Taxonomy", icon: Leaf, color: "bg-emerald-500 text-black", border: "border-emerald-500/20" },
+                { id: "Fungi", title: "Mycology", desc: "Mycelial Networks", icon: Flower2, color: "bg-amber-400 text-black", border: "border-amber-400/20" },
+                { id: "Animalia", title: "Fauna", desc: "Wildlife & Animalia", icon: Heart, color: "bg-rose-400 text-black", border: "border-rose-400/20" }
               ].map((item) => (
                 <button
                   key={item.id}
@@ -346,8 +346,8 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
         return (
           <div className="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500">
             <div className="text-center space-y-4">
-              <h3 className="text-3xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Protocol & Care</h3>
-              <p className="text-xl font-bold text-slate-400 dark:text-white/20">Parameters for a thrive-first environment.</p>
+              <h3 className="text-3xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Environmental Protocol</h3>
+              <p className="text-xl font-bold text-slate-400 dark:text-white/20">Authorized parameters for biological asset stability.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 px-12">
@@ -497,7 +497,7 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
             
             <div className="bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 rounded-[3.5rem] p-12 grid grid-cols-2 gap-12 text-left shadow-inner max-w-2xl mx-auto">
               <div className="space-y-1">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Biological Kingdom</span>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Registry Taxonomy</span>
                 <p className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tighter">
                   {kingdom}
                 </p>

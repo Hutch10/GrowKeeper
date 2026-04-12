@@ -22,10 +22,10 @@ import { SystemLogTerminal } from "@/components/dashboard/system-log-terminal";
 
 const NAV_ITEMS_ALL = [
   { icon: LayoutDashboard, label: "Registry Dashboard", id: "inventory" },
+  { icon: Leaf, label: "My Specimens", id: "inventory" }, // Consolidated into Inventory tab
   { icon: ShieldAlert, label: "Simulation Engine", id: "simulation" },
   { icon: ClipboardList, label: "Compliance Surface", id: "compliance" },
   { icon: Navigation, label: "Field Instrument", href: "/field" },
-  { icon: Leaf, label: "My Specimens", href: "/plants" },
   { icon: CheckSquare, label: "Tasks", href: "/tasks", badge: 3 },
   { icon: Settings, label: "Settings", id: "settings" },
 ];

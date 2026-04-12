@@ -62,18 +62,18 @@ export default async function RootLayout({
 
   const auth = await getAuthenticatedUser();
 
-  const isDashboard = true; // Placeholder or check path if possible in server component
+  const isLockdown = process.env.NEXT_PUBLIC_ALPHA_LOCKDOWN === 'true';
 
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased ${isLockdown ? 'lockdown overflow-hidden' : ''}`}
       >
         <ThemeProvider>
           <SyncStatusProvider>
             <CommandPalette />
             {/* ENTRANCE HARDENING: Generic header is suppressed in Registry Mode */}
-            {!(process.env.NEXT_PUBLIC_ALPHA_LOCKDOWN === 'true') && (
+            {!isLockdown && (
               <header className="border-b border-brand-pink/30 bg-white sticky top-0 z-40">
                 <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-3">
                   <div className="flex items-center gap-4">
@@ -98,10 +98,10 @@ export default async function RootLayout({
                 </div>
               </header>
             )}
-            <main className={process.env.NEXT_PUBLIC_ALPHA_LOCKDOWN === 'true' ? "h-screen" : "min-h-[calc(100vh-57px)]"}>
+            <main className={isLockdown ? "h-screen" : "min-h-[calc(100vh-57px)]"}>
               {children}
             </main>
-            <FeedbackButton />
+            {!isLockdown && <FeedbackButton />}
           </SyncStatusProvider>
         </ThemeProvider>
       </body>

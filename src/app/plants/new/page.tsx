@@ -5,13 +5,14 @@ import { AddSpecimenForm } from "@/components/plants/add-specimen-form";
 import { getAuthenticatedUser } from "@/lib/auth-server";
 
 export default async function NewSpecimenPage() {
-  const auth = await getAuthenticatedUser();
+  const isLockdown = process.env.NEXT_PUBLIC_ALPHA_LOCKDOWN === 'true';
 
-  if (!auth.success) {
-    redirect("/auth?next=/plants/new");
+  if (isLockdown) {
+    redirect("/dashboard");
   }
 
-  return (
+  const auth = await getAuthenticatedUser();
+  // ... rest (legacy fallback)
     <main className="min-h-screen bg-brand-warm font-[family-name:var(--font-geist-sans)] text-brand-dark">
       <PageShell
         title="Add New Specimen"
