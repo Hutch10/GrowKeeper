@@ -102,11 +102,20 @@ export function CommandCenter({
           </div>
           <div className="flex items-center gap-6">
              <div className="flex items-center gap-2">
-                <span className="text-[9px] font-black uppercase tracking-tighter text-slate-400">Not signed in</span>
-                <button className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-tighter text-emerald-500 hover:text-emerald-400 transition-colors">
-                  <LogIn className="w-3 h-3" />
-                  Sign in
-                </button>
+                <span className="text-[9px] font-black uppercase tracking-tighter text-slate-400">
+                  {process.env.NEXT_PUBLIC_SKIP_AUTH === 'true' ? 'Sovereign Operator' : 'Not signed in'}
+                </span>
+                {process.env.NEXT_PUBLIC_SKIP_AUTH === 'true' ? (
+                  <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-tighter text-emerald-500">
+                    <ShieldCheck className="w-3 h-3" />
+                    Authorized
+                  </div>
+                ) : (
+                  <button className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-tighter text-emerald-500 hover:text-emerald-400 transition-colors">
+                    <LogIn className="w-3 h-3" />
+                    Sign in
+                  </button>
+                )}
              </div>
           </div>
         </div>
@@ -234,40 +243,45 @@ export function CommandCenter({
                       <div className="space-y-8">
                         <SpecimenListSkeleton />
                       </div>
+                    ) : (specimens.length === 0 && errorMessage) ? (
+                       <div className="flex flex-col items-center justify-center py-24 px-12 bg-white dark:bg-white/5 rounded-[3.5rem] border border-dashed border-slate-200 dark:border-white/10 text-center group">
+                         <div className="w-24 h-24 bg-slate-50 dark:bg-white/5 rounded-[2.5rem] flex items-center justify-center mb-8 border border-slate-100 dark:border-white/5 group-hover:scale-110 transition-transform">
+                            <Terminal className="w-10 h-10 text-slate-300 dark:text-white/20" />
+                         </div>
+                         <div className="space-y-4">
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Registry Sync Internalized</h3>
+                            <p className="text-sm font-bold text-slate-400 dark:text-white/30 max-w-sm mx-auto leading-relaxed">
+                              Cloud backbone is unreachable. System has shifted authority to the <span className="text-emerald-500 font-black">Local Audit Ledger</span>. 
+                              {/* Only show the raw error if it's not a standard network fault we already handle */}
+                              {!errorMessage.includes("SENTINEL") && <span className="block mt-2 text-red-500/50">Details: {errorMessage}</span>}
+                            </p>
+                         </div>
+                      </div>
                     ) : specimens.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-24 px-12 bg-white dark:bg-white/5 rounded-[3.5rem] border border-dashed border-slate-200 dark:border-white/10 text-center group">
-                        <div className="w-24 h-24 bg-slate-50 dark:bg-white/5 rounded-[2.5rem] flex items-center justify-center mb-8 border border-slate-100 dark:border-white/5 group-hover:scale-110 transition-transform">
-                           <Terminal className="w-10 h-10 text-slate-300 dark:text-white/20" />
-                        </div>
-                        {errorMessage ? (
-                           <div className="space-y-4">
-                              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Identity Verification Failed</h3>
-                              <p className="text-sm font-bold text-slate-400 dark:text-white/30 max-w-sm mx-auto leading-relaxed">
-                                Could not load specimens from Supabase: <span className="text-red-500">{errorMessage}</span>
-                              </p>
-                           </div>
-                        ) : (
-                           <div className="flex flex-col gap-12">
-                              <motion.div 
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-[3.5rem] p-12 shadow-2xl shadow-emerald-900/5 relative overflow-hidden"
-                              >
-                                 <MycelialIllustration />
-                                 
-                                 <div className="flex justify-center gap-6 mt-8 relative z-10">
-                                    <button 
-                                       onClick={() => setIsAddWizardOpen(true)}
-                                       className="px-10 py-4 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-emerald-700 dark:hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20"
-                                    >
-                                       Start First Culture
-                                    </button>
-                                 </div>
-                              </motion.div>
+                       <div className="flex flex-col items-center justify-center py-24 px-12 bg-white dark:bg-white/5 rounded-[3.5rem] border border-dashed border-slate-200 dark:border-white/10 text-center group">
+                         <div className="w-24 h-24 bg-slate-50 dark:bg-white/5 rounded-[2.5rem] flex items-center justify-center mb-8 border border-slate-100 dark:border-white/5 group-hover:scale-110 transition-transform">
+                            <Terminal className="w-10 h-10 text-slate-300 dark:text-white/20" />
+                         </div>
+                         <div className="flex flex-col gap-12">
+                            <motion.div 
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-[3.5rem] p-12 shadow-2xl shadow-emerald-900/5 relative overflow-hidden"
+                            >
+                               <MycelialIllustration />
+                               
+                               <div className="flex justify-center gap-6 mt-8 relative z-10">
+                                  <button 
+                                     onClick={() => setIsAddWizardOpen(true)}
+                                     className="px-10 py-4 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-emerald-700 dark:hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20"
+                                  >
+                                     Start First Culture
+                                  </button>
+                               </div>
+                            </motion.div>
 
-                              <SystemSuggestions onStartWizard={() => setIsAddWizardOpen(true)} />
-                           </div>
-                        )}
+                            <SystemSuggestions onStartWizard={() => setIsAddWizardOpen(true)} />
+                         </div>
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
