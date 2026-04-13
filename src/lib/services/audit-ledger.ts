@@ -14,6 +14,8 @@ export interface AuditEntryOptions {
   targetId: string;
   metadata?: Record<string, unknown>;
   payload?: unknown;
+  provenance?: string;
+  sync_status?: string;
 }
 
 /**
@@ -21,7 +23,7 @@ export interface AuditEntryOptions {
  * Anchors stewardship actions in a verifiable registry for institutional compliance.
  */
 export async function recordAuditEntry(options: AuditEntryOptions) {
-  const { action, target, targetId, metadata = {}, payload } = options;
+  const { action, target, targetId, metadata = {}, payload, provenance, sync_status } = options;
   
   const auth = await getAuthenticatedUser();
   const userId = auth.success ? auth.data.id : null;
@@ -40,6 +42,8 @@ export async function recordAuditEntry(options: AuditEntryOptions) {
     audit_target_id: targetId,
     payload_hash: payloadHash,
     custodian_id: userId,
+    provenance: provenance || (metadata.provenance as string) || "SYSTEM",
+    sync_status: sync_status || (metadata.sync_status as string) || "SYNCED_CLOUD",
     timestamp: new Date().toISOString(),
     governance_v: "1.0.0"
   };

@@ -21,6 +21,9 @@ import { calculateForecast } from '@/lib/services/forecast-engine';
 import { SparklineChart } from '../ui/sparkline-chart';
 import { TaskRow } from '@/app/actions/tasks';
 import { useWeather } from '@/hooks/use-weather';
+import { useEnvironmentalSentinel } from '@/hooks/use-environmental-sentinel';
+import { Badge } from '../ui/badge';
+import { RefreshCw, Map } from 'lucide-react';
 
 interface DetailRailProps {
   specimen: SpecimenRow | null;
@@ -35,6 +38,8 @@ interface DetailRailProps {
  */
 export function DetailRail({ specimen, tasks = [], onClose, onOpenCompliance }: DetailRailProps) {
   const { data: weather } = useWeather(specimen?.location || "New York, NY");
+
+  const { signals: envSignals, triggerSentinel, loading: sentinelLoading } = useEnvironmentalSentinel(specimen?.id);
 
   const forecast = useMemo(() => {
     if (!specimen) return null;
@@ -121,42 +126,60 @@ export function DetailRail({ specimen, tasks = [], onClose, onOpenCompliance }: 
           </div>
         </section>
 
-        {/* Predictive Intelligence */}
-        <section className="p-8 rounded-[3rem] bg-emerald-500/[0.03] border border-emerald-500/10 relative overflow-hidden group">
+        {/* Sentinel Intelligence (Replaces legacy prediction) */}
+        <section className={`p-8 rounded-[3rem] border relative overflow-hidden group transition-all ${
+          envSignals.some(s => s.severity === 'CRITICAL' || s.severity === 'HIGH') 
+            ? 'bg-rose-500/[0.05] border-rose-500/20' 
+            : 'bg-emerald-500/[0.03] border-emerald-500/10'
+        }`}>
           <div className="absolute top-0 right-0 p-6 opacity-10">
-            <BrainCircuit className="w-16 h-16 text-emerald-500 transition-transform group-hover:scale-110" />
+            <BrainCircuit className={`w-16 h-16 transition-transform group-hover:scale-110 ${
+              envSignals.some(s => s.severity === 'CRITICAL' || s.severity === 'HIGH') ? 'text-rose-500' : 'text-emerald-500'
+            }`} />
           </div>
           
-          <div className="flex items-center gap-2 mb-8">
-            <div className="w-1 h-3 bg-emerald-500 rounded-full" />
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-emerald-600/60 dark:text-emerald-500/60 font-black">Predictive Intelligence</h3>
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-2">
+              <div className={`w-1 h-3 rounded-full ${
+                envSignals.some(s => s.severity === 'CRITICAL' || s.severity === 'HIGH') ? 'bg-rose-500' : 'bg-emerald-500'
+              }`} />
+              <h3 className={`text-[10px] font-black uppercase tracking-widest font-black ${
+                envSignals.some(s => s.severity === 'CRITICAL' || s.severity === 'HIGH') ? 'text-rose-600/60' : 'text-emerald-600/60'
+              }`}>Environmental Sentinel</h3>
+            </div>
+            <button 
+              onClick={() => triggerSentinel(specimen.id)}
+              disabled={sentinelLoading}
+              className="p-1.5 hover:bg-black/5 rounded-lg transition-all"
+              title="Trigger Sentinel Evaluation"
+            >
+              <RefreshCw className={`w-3 h-3 text-slate-400 ${sentinelLoading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-8 mb-8">
-            <div>
-              <div className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest mb-2 font-black">Health Trend</div>
-              <div className={`flex items-center gap-2 text-2xl font-black ${forecast.trend >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                {forecast.trend >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
-                {forecast.trend > 0 ? '+' : ''}{forecast.trend}%
-              </div>
+          {envSignals.length > 0 ? (
+            <div className="space-y-6">
+               {envSignals.map(sig => (
+                 <div key={sig.id} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Badge variant={sig.severity === 'CRITICAL' || sig.severity === 'HIGH' ? 'default' : 'secondary'} className={sig.severity === 'CRITICAL' || sig.severity === 'HIGH' ? 'bg-rose-500 text-white' : ''}>
+                        {sig.signal_type}
+                      </Badge>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tabular-nums">Conf: {sig.confidence_score}%</span>
+                    </div>
+                    <p className="text-[11px] font-bold text-slate-600 dark:text-white/60 leading-relaxed">
+                      {sig.operator_summary}
+                    </p>
+                 </div>
+               ))}
             </div>
-            <div>
-              <div className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest mb-2 font-black">Survival Prob.</div>
-              <div className="text-2xl font-black text-slate-800 dark:text-white tabular-nums tracking-tighter">
-                {forecast.survivalProbability}%
-              </div>
+          ) : (
+            <div className="py-2 text-center">
+               <p className="text-[11px] font-bold text-slate-400 italic">No active environmental risks detected by Agent #1.</p>
             </div>
-          </div>
-
-          <div className="space-y-4">
-            {forecast.recommendations.map((rec, i) => (
-              <div key={i} className="flex gap-4 text-[11px] font-bold leading-relaxed text-slate-500 dark:text-white/40 group-hover:text-slate-800 dark:group-hover:text-white/60 transition-colors">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
-                {rec}
-              </div>
-            ))}
-          </div>
+          )}
         </section>
+
 
         {/* Geospatial Intelligence */}
         <section>

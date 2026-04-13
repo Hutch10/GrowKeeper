@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Terminal,
@@ -9,7 +9,12 @@ import {
   Cloud,
   Bell,
   User,
-  LogIn
+  LogIn,
+  ShieldCheck,
+  Zap,
+  ZapOff,
+  RefreshCw,
+  Download
 } from 'lucide-react';
 import { SpecimenSummaryCard } from '../specimens/specimen-summary-card';
 import { ThemeToggle } from '../ui/theme-toggle';
@@ -30,6 +35,11 @@ import { TipsSection } from './tips-section';
 import { AdversarialSimulatorTab } from './adversarial-sim-tab';
 import { ComplianceSurface } from '../compliance/compliance-surface';
 import { AddSpecimenForm } from '../plants/add-specimen-form';
+import { useEnvironmentalSentinel } from '@/hooks/use-environmental-sentinel';
+import { Badge } from '../ui/badge';
+import { DiagnosticTranslator, DiagnosticDirective } from '@/lib/skills/diagnostic-translator';
+import { useIntegrityMemory } from '@/hooks/use-integrity-memory';
+import { Activity } from 'lucide-react';
 
 /**
  * GrowKeeper Command Center (Phase 10: Seamless Onboarding & AI Auth Hardening)
@@ -49,7 +59,37 @@ export function CommandCenter({
   const [selectedSpecimenId, setSelectedSpecimenId] = useState<string | null>(null);
   const [isAddWizardOpen, setIsAddWizardOpen] = useState(false);
   
-  const { specimens, loading: specimensLoading } = useSpecimenData(initialSpecimens as SpecimenRow[]);
+  const { 
+    specimens: specimensFromHook,
+    loading: specimensLoading,
+    syncQueueSize,
+    reconcile,
+    isSyncing,
+    errorMessage: specimenError 
+  } = useSpecimenData(initialSpecimens as SpecimenRow[]);
+
+  const specimens = specimensFromHook || initialSpecimens;
+
+  const diagnostic = useMemo(() => 
+    (errorMessage || specimenError) ? DiagnosticTranslator.translate(errorMessage || specimenError) : null,
+  [errorMessage, specimenError]);
+
+  const { timeline, narrative, loading: memoryLoading } = useIntegrityMemory(selectedSpecimenId || undefined);
+
+  const { signals: envSignals, triggerSentinel } = useEnvironmentalSentinel();
+
+  const exportQueuedData = useCallback(async () => {
+     const { operationsDB } = await import("@/lib/pouchdb");
+     const ops = await operationsDB.find({ selector: { status: 'QUEUED_LOCAL' } });
+     const data = JSON.stringify(ops.docs, null, 2);
+     const blob = new Blob([data], { type: 'application/json' });
+     const url = URL.createObjectURL(blob);
+     const a = document.createElement('a');
+     a.href = url;
+     a.download = `growkeeper_registry_queue_${new Date().toISOString()}.json`;
+     a.click();
+     URL.revokeObjectURL(url);
+  }, []);
   const { tasks, loading: tasksLoading } = useTaskData(initialTasks);
 
   const stats = useMemo(() => 
@@ -96,8 +136,35 @@ export function CommandCenter({
         <div className="h-10 bg-white/50 dark:bg-black/20 border-b border-slate-100 dark:border-white/5 flex items-center justify-between px-12 backdrop-blur-md">
           <div className="flex items-center gap-4">
              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[9px] font-black uppercase tracking-tighter text-slate-400">GrowKeeper Synced</span>
+                {syncQueueSize > 0 ? (
+                  <div className="flex items-center gap-2">
+                    <ZapOff className="w-2.5 h-2.5 text-amber-500 animate-pulse" />
+                    <span 
+                      data-testid="resilient-mode-indicator"
+                      className="text-[9px] font-black uppercase tracking-tighter text-amber-500"
+                    >
+                      {syncQueueSize} Registry Events Buffering
+                    </span>
+                    <button 
+                      onClick={reconcile}
+                      disabled={isSyncing}
+                      className="ml-2 px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded text-[8px] font-black text-amber-500 flex items-center gap-1 hover:bg-amber-500/20 transition-all uppercase"
+                    >
+                      {isSyncing ? <RefreshCw className="w-2 h-2 animate-spin" /> : <RefreshCw className="w-2 h-2" />}
+                      Reconcile
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span 
+                      data-testid="certified-registry-indicator"
+                      className="text-[9px] font-black uppercase tracking-tighter text-slate-400"
+                    >
+                      Registry Certified
+                    </span>
+                  </div>
+                )}
              </div>
           </div>
           <div className="flex items-center gap-6">
@@ -119,6 +186,31 @@ export function CommandCenter({
              </div>
           </div>
         </div>
+
+        {/* Diagnostic Terminal Header */}
+        <AnimatePresence>
+          {diagnostic && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className={`px-12 py-3 border-b border-white/5 flex items-center justify-between ${
+                diagnostic.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-500' : 'bg-amber-500/10 text-amber-500'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Terminal className="w-4 h-4" />
+                <span className="text-[10px] font-black uppercase tracking-widest">{diagnostic.title}:</span>
+                <span className="text-xs font-bold leading-none">{diagnostic.directive}</span>
+              </div>
+              {diagnostic.action_label && (
+                <button className="px-3 py-1 bg-current text-white rounded text-[10px] font-black uppercase tracking-tighter hover:scale-105 transition-transform">
+                  {diagnostic.action_label}
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <header className="flex items-center justify-between px-12 py-8 transition-colors duration-500">
           <div className="flex items-center gap-12">
@@ -225,8 +317,10 @@ export function CommandCenter({
                               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500/80">System Uptime: 99.99%</span>
                            </div>
                            <div className="flex items-center gap-2 px-4 py-2 border rounded-full bg-slate-950 border-white/5 shadow-2xl">
-                              <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
-                              <span className="text-[10px] font-black uppercase tracking-widest text-cyan-500/80">Sync Latency: 24ms</span>
+                              <div className={`w-2 h-2 rounded-full animate-pulse ${syncQueueSize > 0 ? 'bg-amber-500' : 'bg-cyan-500'}`} />
+                              <span className={`text-[10px] font-black uppercase tracking-widest ${syncQueueSize > 0 ? 'text-amber-500/80' : 'text-cyan-500/80'}`}>
+                                {syncQueueSize > 0 ? `Registry Buffering: ${syncQueueSize} Ops` : 'Cloud Sync Active'}
+                              </span>
                            </div>
                         </div>
 
@@ -252,9 +346,28 @@ export function CommandCenter({
                             <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Registry Sync Internalized</h3>
                             <p className="text-sm font-bold text-slate-400 dark:text-white/30 max-w-sm mx-auto leading-relaxed">
                               Cloud backbone is unreachable. System has shifted authority to the <span className="text-emerald-500 font-black">Local Audit Ledger</span>. 
-                              {/* Only show the raw error if it's not a standard network fault we already handle */}
-                              {!errorMessage.includes("SENTINEL") && <span className="block mt-2 text-red-500/50">Details: {errorMessage}</span>}
+                              {syncQueueSize > 0 && <span className="block mt-2 text-amber-500 font-black uppercase tracking-widest text-[10px]">{syncQueueSize} local operations queued for reconciliation.</span>}
+                              {!errorMessage?.includes("SENTINEL") && <span className="block mt-2 text-red-500/50">Connectivity Fault Detected.</span>}
                             </p>
+                            {syncQueueSize > 0 && (
+                              <div className="flex gap-2 justify-center">
+                                <button 
+                                  onClick={reconcile}
+                                  disabled={isSyncing}
+                                  className="mt-6 px-10 py-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-[10px] font-black text-emerald-500 flex items-center gap-2 hover:bg-emerald-500/20 transition-all uppercase"
+                                >
+                                  {isSyncing ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                  Manual Reconcile Attempt
+                                </button>
+                                <button 
+                                  onClick={exportQueuedData}
+                                  className="mt-6 px-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-white/40 flex items-center gap-2 hover:bg-white/10 transition-all uppercase"
+                                  title="Export unsynced data for recovery"
+                                >
+                                  <Download className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )}
                          </div>
                       </div>
                     ) : specimens.length === 0 ? (
@@ -290,6 +403,7 @@ export function CommandCenter({
                             key={s.id} 
                             specimen={s} 
                             tasks={tasks}
+                            envSignals={envSignals.filter(sig => sig.specimen_id === s.id)}
                             onClick={() => setSelectedSpecimenId(s.id)}
                             active={selectedSpecimenId === s.id}
                           />
@@ -346,6 +460,64 @@ export function CommandCenter({
                   onClose={() => setSelectedSpecimenId(null)} 
                   onOpenCompliance={handleOpenCompliance}
                 />
+                
+                {/* Integrity Timeline Memory Card */}
+                {narrative && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-3xl p-6 shadow-xl"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                        <h3 className="text-xs font-black uppercase tracking-widest">Integrity Narrative</h3>
+                      </div>
+                      <Badge variant={narrative.confidence_label === 'HIGH' ? 'success' : 'warning'}>
+                        {narrative.confidence_label} CONFIDENCE
+                      </Badge>
+                    </div>
+                    
+                    <p className="text-xs font-bold text-slate-400 dark:text-white/40 leading-relaxed mb-6 italic">
+                      &quot;{narrative.summary}&quot;
+                    </p>
+
+                    <div className="space-y-3">
+                      {narrative.timeline.slice(0, 5).map(event => (
+                        <div key={event.id} className="flex gap-3 text-[10px]">
+                          <div className={`w-1 h-auto rounded-full ${event.is_integrity_event ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-slate-900 dark:text-white font-bold">{event.description}</p>
+                              {event.sync_status === 'BUFFERED_LOCAL' ? (
+                                <div 
+                                  key={`uncertified-${event.id}`}
+                                  data-testid="integrity-badge-uncertified"
+                                  className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20"
+                                >
+                                  <RefreshCw className="w-2 h-2 text-orange-500 animate-spin-slow" />
+                                  <span className="text-[7px] font-black text-orange-500 uppercase tracking-tighter">UNCERTIFIED</span>
+                                </div>
+                              ) : (
+                                <div 
+                                  key={`certified-${event.id}`}
+                                  data-testid="integrity-badge-certified"
+                                  className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20"
+                                >
+                                  <ShieldCheck className="w-2 h-2 text-emerald-500" />
+                                  <span className="text-[7px] font-black text-emerald-500 uppercase tracking-tighter">CERTIFIED</span>
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-slate-400 dark:text-white/20 uppercase tracking-tighter font-medium">
+                              {new Date(event.timestamp).toLocaleTimeString()} • {event.provenance}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

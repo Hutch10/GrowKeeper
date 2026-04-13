@@ -94,19 +94,33 @@ export function SystemLogTerminal() {
                 log.type === 'warn' ? 'text-amber-400' : 
                 log.type === 'error' ? 'text-red-400' : 
                 log.type === 'event' ? 'text-emerald-400' : 
+                log.type === 'audit' ? 'text-cyan-400 border-l-2 border-cyan-500/50 pl-2' :
+                log.type === 'sync' ? 'text-brand-pink border-l-2 border-brand-pink/50 pl-2' :
                 log.type === 'sentinel' ? 'text-white border-l-2 border-brand-pink pl-3 py-1 bg-brand-pink/5' :
                 'text-emerald-500/80'
               }`}
-              style={{ textShadow: log.type === 'sentinel' ? 'none' : '0 0 10px currentColor' }}
+              style={{ textShadow: (log.type === 'sentinel' || log.type === 'audit') ? 'none' : '0 0 10px currentColor' }}
             >
               <span className="opacity-30 shrink-0">[{log.timestamp.toLocaleTimeString([], { hour12: false })}]</span>
               <div className="flex flex-col gap-1">
-                {log.type === 'sentinel' && (
-                  <span className="text-[8px] font-black text-brand-pink uppercase tracking-widest mb-1">
-                    {log.metadata?.provider_label || 'Registry Sentinel'}
-                  </span>
+                {(log.type === 'sentinel' || log.type === 'audit') && (
+                  <div className="flex gap-2 items-center mb-1">
+                    <span className={`text-[8px] font-black uppercase tracking-widest ${log.type === 'audit' ? 'text-cyan-500' : 'text-brand-pink'}`}>
+                      {log.metadata?.provider_label || (log.type === 'audit' ? 'Audit Ledger' : 'Registry Sentinel')}
+                    </span>
+                    {log.metadata?.provenance && (
+                      <span className="text-[7px] font-black bg-white/10 px-1.5 py-0.5 rounded text-white/50 uppercase">
+                        Source: {log.metadata.provenance}
+                      </span>
+                    )}
+                  </div>
                 )}
-                <span className="break-all whitespace-pre-wrap">{log.message}</span>
+                <span className="break-all whitespace-pre-wrap">
+                  {log.message}
+                  {log.metadata?.payload_hash && (
+                    <span className="block text-[8px] opacity-30 mt-1 font-mono">HASH: {log.metadata.payload_hash.slice(0, 8)}...</span>
+                  )}
+                </span>
               </div>
             </motion.div>
           ))}
