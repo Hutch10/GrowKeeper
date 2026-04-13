@@ -115,6 +115,12 @@ export class IntelligenceMemoryManager {
           
           // id-based upsert ensures idempotency
           AuditSentinel.validateTransition(memoryDoc.sync_status, 'SYNCED_CLOUD', 'REPLAY_CERTIFICATION');
+
+          // Integrity check: If this is a specimen update, ensure causality
+          if (memoryDoc.doc_type === 'integrity_timeline_entry') {
+             // In a more complex sync, we would fetch the cloud version here and use reconciliation.reconcile()
+             // For now, we rely on the AuditSentinel and the unique correlation_id to prevent redundant transitions.
+          }
           
           const { error } = await supabase.from(tableName).upsert({
             ...memoryDoc.payload,
