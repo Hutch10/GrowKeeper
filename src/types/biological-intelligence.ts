@@ -1,9 +1,23 @@
 import { Json } from "./database";
 
-export type KingdomType = 'Plantae' | 'Fungi' | 'Animalia' | 'Other';
+export type ProvenanceSource = 
+  | 'USER' 
+  | 'SENTINEL_RULE' 
+  | 'ENVIRONMENTAL_AGENT' 
+  | 'SYSTEM_SYNC' 
+  | 'RECOVERY_REPLAY'
+  | 'LOCAL_BUFFER';
+
+export type SyncStatus = 
+  | 'QUEUED_LOCAL' 
+  | 'SYNCING' 
+  | 'SYNCED_CLOUD' 
+  | 'REPLAYED' 
+  | 'CONFLICT' 
+  | 'FAILED';
 
 /**
- * Atomic Biological Specimen (v2.3.9)
+ * Atomic Biological Specimen (v2.4.0)
  * Unified structure for all biological entities to ensure 100% type reliability.
  */
 export interface BiologicalSpecimen {
@@ -23,6 +37,16 @@ export interface BiologicalSpecimen {
     light?: number;
     humidity?: number;
   };
+  
+  // SOVEREIGN INFRASTRUCTURE: Hardened Provenance & Integrity
+  provenance: ProvenanceSource;
+  confidence_score: number; // 0-100
+  sync_status: SyncStatus;
+  
+  _is_buffered?: boolean;
+  _last_sync_attempt?: string;
+  _sync_error?: string;
+
   happiness_score?: number | null;
   health_status?: string | null;
   compliance_status?: string | null;
@@ -35,7 +59,7 @@ export interface BiologicalSpecimen {
   lon?: number | null;
   custodian_id?: string | null;
   last_action_type?: string | null;
-  source?: string | null;
+  source?: string | null; // Deprecating in favor of provenance
   acquisition_date?: string | null;
   status?: string | null;
   zk_proof?: string | null;
