@@ -3,7 +3,6 @@
 import { useState, useTransition, useMemo } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { DashboardHeader } from "@/components/dashboard/header";
-import { SpecimenDetailPanel } from "@/components/dashboard/specimen-detail-panel";
 import { CheckCircle2, Clock, Calendar, CheckCircle, Search, Leaf } from "lucide-react";
 import { markTaskComplete } from "@/app/actions/tasks";
 import { formatDate } from "@/lib/date";
@@ -200,11 +199,20 @@ export function TasksClient({ initialTasks, specimens }: TasksClientProps) {
         </div>
       </main>
 
-      <div className="flex items-start sticky top-0 h-screen p-4 pr-6 shrink-0 border-l border-brand-forest/10">
-        <SpecimenDetailPanel 
-          specimen={selectedSpecimen}
-        />
-      </div>
+      {selectedSpecimen && (
+        <div className="flex flex-col sticky top-0 h-screen w-72 shrink-0 border-l border-brand-forest/10 p-6 bg-white/60">
+          <h3 className="font-black text-brand-forest mb-1">{selectedSpecimen.nickname}</h3>
+          <p className="text-sm text-brand-forest/50 mb-4">{selectedSpecimen.species_name || 'Species unidentified'}</p>
+          <div className="flex-1 overflow-y-auto space-y-3">
+            {tasks.filter(t => t.specimen_id === selectedSpecimen.id && !t.completed).map(t => (
+              <div key={t.id} className="text-xs text-brand-forest/70 flex items-center gap-2">
+                <div className={`w-1.5 h-1.5 rounded-full ${t.due_date && new Date(t.due_date) < new Date() ? 'bg-red-500' : 'bg-amber-400'}`} />
+                {t.task_type}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

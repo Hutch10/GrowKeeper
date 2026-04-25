@@ -2,25 +2,28 @@ import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { PageShell } from "@/components/layout/page-shell";
-import { getSpecimenById } from "@/app/actions/specimen-actions";
-import { getSpecimenEvents } from "@/app/actions/specimen-events";
-import { getSpecimenTasks } from "@/app/actions/tasks";
+import { getPlantById } from "@/app/actions/plants";
+import { getPlantEvents } from "@/app/actions/plant-events";
+import { getPlantTasks } from "@/app/actions/tasks";
 import { formatDate } from "@/lib/date";
 import { AddCareEventForm } from "@/components/care-events/add-care-event-form";
 import { CareEventList } from "@/components/care-events/care-event-list";
 import { AddTaskForm } from "@/components/tasks/add-task-form";
 import { TaskList } from "@/components/tasks/task-list";
+import { HealthSparkline } from "@/components/plants/health-sparkline";
+import { CareSchedule } from "@/components/plants/care-schedule";
+import { getPlantWeatherAlert } from "@/app/actions/weather-alert";
 
 export const dynamic = "force-dynamic";
 
-type SpecimenDetailPageProps = {
+type PlantDetailPageProps = {
   params: {
     id: string;
   };
 };
 
-export default async function SpecimenDetailPage({ params }: SpecimenDetailPageProps) {
-  const result = await getSpecimenById(params.id);
+export default async function PlantDetailPage({ params }: PlantDetailPageProps) {
+  const result = await getPlantById(params.id);
 
   if (!result.success && result.error === "Not signed in") {
     redirect(`/auth?next=/plants/${params.id}`);
@@ -29,12 +32,12 @@ export default async function SpecimenDetailPage({ params }: SpecimenDetailPageP
   if (!result.success && result.error === "Database connection error") {
     return (
       <main className="min-h-screen bg-slate-50 font-[family-name:var(--font-geist-sans)] text-slate-900">
-        <PageShell title="Specimen Details" subtitle="View specimen information.">
+        <PageShell title="Plant Details" subtitle="View plant information.">
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             Database connection error
           </div>
-          <Link href="/plants" className="text-sm text-slate-700 underline hover:text-slate-900">
-            Back to specimens
+          <Link href="/" className="text-sm text-slate-700 underline hover:text-slate-900">
+            Back to plants
           </Link>
         </PageShell>
       </main>
@@ -44,101 +47,128 @@ export default async function SpecimenDetailPage({ params }: SpecimenDetailPageP
   if (!result.success) {
     return (
       <main className="min-h-screen bg-slate-50 font-[family-name:var(--font-geist-sans)] text-slate-900">
-        <PageShell title="Specimen Details" subtitle="View specimen information.">
+        <PageShell title="Plant Details" subtitle="View plant information.">
           <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600">
             {result.error}
           </div>
-          <Link href="/plants" className="text-sm text-slate-700 underline hover:text-slate-900">
-            Back to specimens
+          <Link href="/" className="text-sm text-slate-700 underline hover:text-slate-900">
+            Back to plants
           </Link>
         </PageShell>
       </main>
     );
   }
 
-  const specimen = result.data;
-  
-  // Fetch care events and tasks for this specimen
-  const eventsResult = await getSpecimenEvents(params.id);
-  const tasksResult = await getSpecimenTasks(params.id);
+  const plant = result.data;
+  const eventsResult = await getPlantEvents(params.id);
+  const tasksResult = await getPlantTasks(params.id);
   const events = eventsResult.success ? eventsResult.data : [];
   const tasks = tasksResult.success ? tasksResult.data : [];
 
+  // Ascending order for sparkline; events come in descending by default
+  const eventsAsc = [...events].reverse();
+
+  const weatherAlert = await getPlantWeatherAlert(plant.lat, plant.lon);
+
   return (
-    <main className="min-h-screen bg-brand-warm font-[family-name:var(--font-geist-sans)] text-brand-dark">
-      <PageShell title={specimen.nickname} subtitle="Specimen details and care history">
-        {/* Specimen Details */}
-        <div className="grid gap-6 md:grid-cols-[1fr_2fr]">
-          {/* Specimen Image Card */}
-          <div className="overflow-hidden rounded-xl border border-brand-pink/30 bg-white shadow-sm">
-            <div className="aspect-square w-full bg-brand-pink-light">
-              {specimen.image_url ? (
-                <div className="relative h-full w-full">
-                  <Image
-                    src={specimen.image_url}
-                    alt={specimen.nickname}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              ) : (
-                <div className="flex h-full items-center justify-center text-brand-green/20">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="h-20 w-20"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
-                    />
-                  </svg>
-                </div>
-              )}
+    <main className="min-h-screen bg-slate-50 font-[family-name:var(--font-geist-sans)] text-slate-900">
+      <PageShell title={plant.nickname} subtitle="Plant details and care history">
+
+        {/* Weather alert banner */}
+        {weatherAlert && (
+          <div className={`rounded-xl border px-5 py-4 flex items-start gap-3 ${
+            weatherAlert.level === "frost"
+              ? "bg-blue-50 border-blue-200 text-blue-900"
+              : "bg-orange-50 border-orange-200 text-orange-900"
+          }`}>
+            <span className="text-2xl">{weatherAlert.level === "frost" ? "🌨️" : "🌡️"}</span>
+            <div>
+              <p className="font-bold text-sm">{weatherAlert.message}</p>
+              <p className="text-sm mt-0.5 opacity-75">{weatherAlert.recommendation}</p>
             </div>
           </div>
+        )}
 
-          {/* Specimen Information */}
-          <div className="rounded-xl border border-brand-pink/30 bg-white p-6 shadow-sm">
-            <dl className="space-y-4">
+        {/* Hero: photo + core stats */}
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          {plant.image_url ? (
+            <div className="relative w-full h-56 bg-slate-100">
+              <Image
+                src={plant.image_url}
+                alt={plant.nickname}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 700px"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-center w-full h-32 bg-gradient-to-br from-green-50 to-emerald-100">
+              <span className="text-5xl">🌿</span>
+            </div>
+          )}
+
+          <div className="p-6 space-y-5">
+            {/* Core details */}
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
               <div>
-                <dt className="text-xs uppercase tracking-wide text-brand-dark/50 font-bold">Nickname</dt>
-                <dd className="text-base text-brand-dark font-medium">{specimen.nickname}</dd>
+                <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">Nickname</dt>
+                <dd className="text-base font-semibold text-slate-900 mt-0.5">{plant.nickname}</dd>
               </div>
               <div>
-                <dt className="text-xs uppercase tracking-wide text-brand-dark/50 font-bold">Species</dt>
-                <dd className="text-base text-brand-dark font-medium">{specimen.species_name ?? "N/A"}</dd>
+                <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">Species</dt>
+                <dd className="text-base font-semibold text-slate-900 mt-0.5">{plant.species_name ?? "Unknown"}</dd>
               </div>
+              {plant.location && (
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">Location</dt>
+                  <dd className="text-base font-semibold text-slate-900 mt-0.5">{plant.location}</dd>
+                </div>
+              )}
               <div>
-                <dt className="text-xs uppercase tracking-wide text-brand-dark/50 font-bold">Notes</dt>
-                <dd className="text-base whitespace-pre-wrap text-brand-dark font-medium">{specimen.notes ?? "N/A"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs uppercase tracking-wide text-brand-dark/50 font-bold">Created</dt>
-                <dd className="text-base text-brand-dark font-medium">{formatDate(specimen.created_at)}</dd>
+                <dt className="text-xs uppercase tracking-wide text-slate-400 font-medium">Added</dt>
+                <dd className="text-base font-semibold text-slate-900 mt-0.5">{formatDate(plant.created_at)}</dd>
               </div>
             </dl>
+
+            {plant.notes && (
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-400 font-medium mb-1">Notes</p>
+                <p className="text-sm text-slate-700 whitespace-pre-wrap">{plant.notes}</p>
+              </div>
+            )}
+
+            {/* Health sparkline */}
+            <div className="pt-2 border-t border-slate-100">
+              <HealthSparkline
+                events={eventsAsc}
+                createdAt={plant.created_at}
+                currentHealth={plant.health ?? 100}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Log Care Event Form */}
+        {/* Care schedule intelligence */}
         <section>
-          <h2 className="mb-4 text-xl font-semibold text-brand-dark">
-            Log Care Event
-          </h2>
+          <h2 className="mb-3 text-lg font-semibold text-slate-900">Care Schedule</h2>
+          <CareSchedule events={events} />
+        </section>
+
+        {/* Log Care Event */}
+        <section>
+          <h2 className="mb-3 text-lg font-semibold text-slate-900">Log Care Event</h2>
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <AddCareEventForm specimenId={params.id} />
+            <AddCareEventForm plantId={params.id} />
           </div>
         </section>
 
-        {/* Care Event History */}
+        {/* Care History */}
         <section>
-          <h2 className="mb-4 text-xl font-semibold text-slate-900">
+          <h2 className="mb-3 text-lg font-semibold text-slate-900">
             Care History
+            {events.length > 0 && (
+              <span className="ml-2 text-sm font-normal text-slate-400">({events.length} events)</span>
+            )}
           </h2>
           {!eventsResult.success ? (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -149,15 +179,21 @@ export default async function SpecimenDetailPage({ params }: SpecimenDetailPageP
           )}
         </section>
 
+        {/* Tasks */}
         <section>
-          <h2 className="mb-4 text-xl font-semibold text-slate-900">Tasks</h2>
+          <h2 className="mb-3 text-lg font-semibold text-slate-900">Add Task</h2>
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <AddTaskForm specimenId={params.id} />
+            <AddTaskForm plantId={params.id} />
           </div>
         </section>
 
         <section>
-          <h2 className="mb-4 text-xl font-semibold text-slate-900">Task List</h2>
+          <h2 className="mb-3 text-lg font-semibold text-slate-900">
+            Tasks
+            {tasks.length > 0 && (
+              <span className="ml-2 text-sm font-normal text-slate-400">({tasks.length})</span>
+            )}
+          </h2>
           {!tasksResult.success ? (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               {tasksResult.error === "Not signed in"
@@ -169,8 +205,8 @@ export default async function SpecimenDetailPage({ params }: SpecimenDetailPageP
           )}
         </section>
 
-        <Link href="/plants" className="text-sm text-slate-700 underline hover:text-slate-900">
-          ← Back to specimens
+        <Link href="/" className="text-sm text-slate-700 underline hover:text-slate-900">
+          ← Back to plants
         </Link>
       </PageShell>
     </main>

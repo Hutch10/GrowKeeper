@@ -1,8 +1,5 @@
 import { logger } from '../../observability/logger';
-import { deriveSpecimenState } from '../biological-engine';
-import { validateBiologicalConstraint } from '../biological-memory';
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import Anthropic from "@anthropic-ai/sdk";
 
 import type { SpecimenRow, EventRow } from "@/app/actions/types";
 
@@ -69,21 +66,12 @@ export abstract class SpecialistAgent {
   protected abstract name: string;
   protected abstract systemPrompt: string;
 
-  async analyze(specimen: SpecimenRow, events: EventRow[]): Promise<AgentResponse> {
+  async analyze(specimen: SpecimenRow, _events: EventRow[]): Promise<AgentResponse> {
     const provider = ProviderFactory.getProvider();
-    
-    // 1. Tool Call: Derive Current Truth (Biological Engine)
-    const projectedState = deriveSpecimenState(specimen, events);
-
-    // 2. Memory Check: Validate against hard constraints
-    const constraints = validateBiologicalConstraint(specimen.genus || "Default", {
-      moisture: projectedState.moisture,
-      temp: 22,
-    });
 
     try {
-      const systemContext = `${this.systemPrompt}\n\nBIOLOGICAL GROUNDING:\n- Specimen: ${specimen.nickname}\n- Moisture: ${Math.round(projectedState.moisture * 100)}%\n- Violations: ${constraints.violations.join(', ') || 'None'}`;
-      
+      const systemContext = `${this.systemPrompt}\n\nSpecimen: ${specimen.nickname}`;
+
       const analysis = await provider.execute(
         systemContext,
         `Analyze specimen: ${specimen.nickname}. Apply industrial logic.`
@@ -92,7 +80,7 @@ export abstract class SpecialistAgent {
       return {
         analysis: analysis,
         proposed_actions: [],
-        confidence: projectedState.confidence,
+        confidence: 0.5,
         provider_label: provider.getLabel(),
       };
     } catch (err) {

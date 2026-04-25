@@ -1,5 +1,5 @@
 import { memoryDB, IntelligenceMemoryDoc, fromPouch, toPouch } from '@/lib/pouchdb';
-import { createClient } from '@/lib/supabase-server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { recordAuditEntry } from '@/lib/services/audit-ledger';
 import { AuditSentinel } from '@/lib/agents/audit-sentinel';
 
@@ -15,7 +15,8 @@ export class IntelligenceMemoryManager {
    */
   static async persist(
     doc: Omit<IntelligenceMemoryDoc, '_id' | '_rev' | 'created_at' | 'updated_at' | 'sync_status'>,
-    correlation_id: string
+    correlation_id: string,
+    supabase: SupabaseClient
   ): Promise<boolean> {
     const now = new Date().toISOString();
     const id = crypto.randomUUID();
@@ -35,7 +36,6 @@ export class IntelligenceMemoryManager {
       await memoryDB.put(docToBuffer as any);
 
       // Step B: Attempt Cloud Canonical Write
-      const supabase = createClient();
       const tableName = this.mapDocTypeToTable(doc.doc_type);
       
       const { error } = await supabase.from(tableName).insert({
@@ -95,7 +95,7 @@ export class IntelligenceMemoryManager {
    * Reconciles the local backlog by replaying uncertified records to the cloud.
    * ENFORCEMENT: Only promotes to SYNCED_CLOUD after verified Supabase success.
    */
-  static async reconcileBacklog(): Promise<{ processed: number; success: number; failed: number }> {
+  static async reconcileBacklog(supabase: SupabaseClient): Promise<{ processed: number; success: number; failed: number }> {
     const result = { processed: 0, success: 0, failed: 0 };
     
     try {
@@ -110,7 +110,6 @@ export class IntelligenceMemoryManager {
         const memoryDoc = fromPouch<IntelligenceMemoryDoc>(doc);
         
         try {
-          const supabase = createClient();
           const tableName = this.mapDocTypeToTable(memoryDoc.doc_type);
           
           // id-based upsert ensures idempotency
@@ -124,7 +123,7 @@ export class IntelligenceMemoryManager {
           
           const { error } = await supabase.from(tableName).upsert({
             ...memoryDoc.payload,
-            id: memoryDoc.id,
+            id: memoryDoc._id,
             user_id: (await supabase.auth.getUser()).data.user?.id,
             correlation_id: memoryDoc.correlation_id,
             specimen_id: memoryDoc.specimen_id,
@@ -135,7 +134,7 @@ export class IntelligenceMemoryManager {
           });
 
           if (error) {
-            console.warn(`[REPLAY_FAILED] Record ${memoryDoc.id} remain uncertified.`, error.message);
+            console.warn(`[REPLAY_FAILED] Record ${memoryDoc._id} remain uncertified.`, error.message);
             result.failed++;
             continue;
           }
@@ -151,7 +150,7 @@ export class IntelligenceMemoryManager {
           result.success++;
 
         } catch (err) {
-          console.error(`[REPLAY_FAULT] Interruption during record ${memoryDoc.id} replay.`, err);
+          console.error(`[REPLAY_FAULT] Interruption during record ${memoryDoc._id} replay.`, err);
           result.failed++;
         }
       }

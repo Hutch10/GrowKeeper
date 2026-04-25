@@ -1,546 +1,375 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Terminal,
-  Plus,
-  Sun,
-  Cloud,
-  Bell,
-  User,
-  LogIn,
-  ShieldCheck,
-  Zap,
-  ZapOff,
-  RefreshCw,
-  Download
-} from 'lucide-react';
-import { SpecimenSummaryCard } from '../specimens/specimen-summary-card';
-import { ThemeToggle } from '../ui/theme-toggle';
-import { SpecimenListSkeleton } from '../ui/skeleton';
-import { MycelialIllustration } from './mycelial-illustration';
-import { SystemSuggestions } from './system-suggestions';
-import { useSpecimenData } from '@/hooks/use-specimen-data';
-import { useTaskData } from '@/hooks/use-task-data';
-import { aggregateDashboardStats } from '@/lib/services/dashboard-stats';
-import type { Specimen } from '@/types/specimen';
-import type { SpecimenRow } from '@/app/actions/types';
-import type { TaskRow } from '@/app/actions/tasks';
-import { KPIStrip } from './kpi-strip';
-import { DetailRail } from './detail-rail';
-import { ComplianceView } from './compliance-view';
-import { Sidebar } from '../layout/sidebar';
-import { TipsSection } from './tips-section';
-import { AdversarialSimulatorTab } from './adversarial-sim-tab';
-import { ComplianceSurface } from '../compliance/compliance-surface';
-import { AddSpecimenForm } from '../plants/add-specimen-form';
-import { useEnvironmentalSentinel } from '@/hooks/use-environmental-sentinel';
-import { Badge } from '../ui/badge';
-import { DiagnosticTranslator, DiagnosticDirective } from '@/lib/skills/diagnostic-translator';
-import { useIntegrityMemory } from '@/hooks/use-integrity-memory';
-import { Activity } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { Bell, Leaf, User, Plus, ChevronRight, Droplets, Sun, Flower2, MapPin, RefreshCw, Download } from "lucide-react";
+import { SpecimenSummaryCard } from "../specimens/specimen-summary-card";
+import { SpecimenListSkeleton } from "../ui/skeleton";
+import { SystemSuggestions } from "./system-suggestions";
+import { useSpecimenData } from "@/hooks/use-specimen-data";
+import { useTaskData } from "@/hooks/use-task-data";
+import { aggregateDashboardStats } from "@/lib/services/dashboard-stats";
+import type { Specimen } from "@/types/specimen";
+import type { SpecimenRow } from "@/app/actions/types";
+import type { TaskRow } from "@/app/actions/tasks";
+import { KPIStrip } from "./kpi-strip";
+import { Sidebar } from "../layout/sidebar";
+import { TipsSection } from "./tips-section";
+import { AddSpecimenForm } from "../plants/add-specimen-form";
+import { AnimatePresence } from "framer-motion";
+import Image from "next/image";
+import NextImage from "next/image";
 
-/**
- * GrowKeeper Command Center (Phase 10: Seamless Onboarding & AI Auth Hardening)
- * Features a high-fidelity Auth Status header and specific error handling.
- */
-export function CommandCenter({ 
+const ARTICLE_IMAGES = [
+  "https://images.unsplash.com/photo-1585829319212-0a19af8e37d1?auto=format&fit=crop&q=80&w=800",
+  "https://images.unsplash.com/photo-1597055181300-e3633a207519?auto=format&fit=crop&q=80&w=800",
+];
+
+const FALLBACK_DETAIL_IMG =
+  "https://images.unsplash.com/photo-1545241047-6083a3684587?auto=format&fit=crop&q=80&w=800";
+
+function useClock() {
+  const [time, setTime] = useState("");
+  useEffect(() => {
+    const tick = () =>
+      setTime(
+        new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+      );
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+  return time;
+}
+
+export function CommandCenter({
   initialSpecimens,
   initialTasks = [],
-  errorMessage
-}: { 
-  initialSpecimens?: Specimen[],
-  initialTasks?: TaskRow[],
-  errorMessage?: string
+  errorMessage,
+}: {
+  initialSpecimens?: Specimen[];
+  initialTasks?: TaskRow[];
+  errorMessage?: string;
 }) {
-  const [activeTab, setActiveTab] = useState<'inventory' | 'simulation' | 'compliance' | string>('inventory');
-  const [activeFilter, setActiveFilter] = useState('all');
   const [selectedSpecimenId, setSelectedSpecimenId] = useState<string | null>(null);
   const [isAddWizardOpen, setIsAddWizardOpen] = useState(false);
-  
-  const { 
+
+  const {
     specimens: specimensFromHook,
     loading: specimensLoading,
     syncQueueSize,
     reconcile,
     isSyncing,
-    errorMessage: specimenError 
+    errorMessage: specimenError,
   } = useSpecimenData(initialSpecimens as SpecimenRow[]);
 
-  const specimens = specimensFromHook || initialSpecimens;
+  const specimens = specimensFromHook || initialSpecimens || [];
+  const displayError = specimenError || errorMessage;
 
-  const diagnostic = useMemo(() => 
-    (errorMessage || specimenError) ? DiagnosticTranslator.translate(errorMessage || specimenError) : null,
-  [errorMessage, specimenError]);
-
-  const { timeline, narrative, loading: memoryLoading } = useIntegrityMemory(selectedSpecimenId || undefined);
-
-  const { signals: envSignals, triggerSentinel } = useEnvironmentalSentinel();
+  const { tasks, loading: tasksLoading } = useTaskData(initialTasks);
+  const stats = useMemo(
+    () => aggregateDashboardStats(specimens as Specimen[], tasks),
+    [specimens, tasks]
+  );
 
   const exportQueuedData = useCallback(async () => {
-     const { operationsDB } = await import("@/lib/pouchdb");
-     const ops = await operationsDB.find({ selector: { status: 'QUEUED_LOCAL' } });
-     const data = JSON.stringify(ops.docs, null, 2);
-     const blob = new Blob([data], { type: 'application/json' });
-     const url = URL.createObjectURL(blob);
-     const a = document.createElement('a');
-     a.href = url;
-     a.download = `growkeeper_registry_queue_${new Date().toISOString()}.json`;
-     a.click();
-     URL.revokeObjectURL(url);
+    const { operationsDB } = await import("@/lib/pouchdb");
+    const ops = await operationsDB.find({ selector: { status: "QUEUED_LOCAL" } });
+    const data = JSON.stringify(ops.docs, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `growkeeper_queue_${new Date().toISOString()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }, []);
-  const { tasks, loading: tasksLoading } = useTaskData(initialTasks);
 
-  const stats = useMemo(() => 
-    aggregateDashboardStats(specimens as Specimen[], tasks),
-  [specimens, tasks]);
+  const selectedSpecimen = useMemo(
+    () =>
+      (specimens.find((s) => s.id === selectedSpecimenId) ||
+        specimens[0]) as SpecimenRow | undefined,
+    [specimens, selectedSpecimenId]
+  );
 
-  const filteredSpecimens = useMemo(() => {
-    const base = (specimens as Specimen[]);
-    if (activeFilter === 'all') return base;
-    
-    switch (activeFilter) {
-      case 'due':
-        const dueIds = tasks.filter((t: TaskRow) => !t.completed && t.due_date).map((t: TaskRow) => t.specimen_id);
-        return base.filter((s: Specimen) => dueIds.includes(s.id));
-      default:
-        return base;
-    }
-  }, [specimens, tasks, activeFilter]);
+  const pendingTasks = useMemo(
+    () =>
+      tasks
+        .filter((t: TaskRow) => t.specimen_id === selectedSpecimen?.id && !t.completed)
+        .slice(0, 3),
+    [tasks, selectedSpecimen]
+  );
 
-  const selectedSpecimen = useMemo(() => 
-    specimens.find(s => s.id === selectedSpecimenId) as SpecimenRow | undefined,
-  [specimens, selectedSpecimenId]);
-
-  const [isComplianceOpen, setIsComplianceOpen] = useState(false);
-  const [complianceSpecimen, setComplianceSpecimen] = useState<SpecimenRow | null>(null);
-
-  const handleOpenCompliance = (specimen: SpecimenRow) => {
-    setComplianceSpecimen(specimen);
-    setIsComplianceOpen(true);
-  };
+  const clock = useClock();
 
   return (
-    <div className="flex h-screen bg-[#F8F7F3] dark:bg-background text-foreground overflow-hidden font-sans selection:bg-emerald-500/30 relative transition-colors duration-500">
-      {/* Visual Background for Solaris Mode */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0 mix-blend-multiply overflow-hidden">
-        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-emerald-900 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-amber-900 rounded-full blur-[120px]" />
-      </div>
+    <div className="flex h-screen bg-[#f5f3ee] font-sans overflow-hidden">
+      <Sidebar />
 
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
-      
-      <div className="flex-1 flex flex-col min-w-0 z-10 overflow-hidden">
-        {/* Institutional Auth Status Bar */}
-        <div className="h-10 bg-white/50 dark:bg-black/20 border-b border-slate-100 dark:border-white/5 flex items-center justify-between px-12 backdrop-blur-md">
-          <div className="flex items-center gap-4">
-             <div className="flex items-center gap-2">
-                {syncQueueSize > 0 ? (
-                  <div className="flex items-center gap-2">
-                    <ZapOff className="w-2.5 h-2.5 text-amber-500 animate-pulse" />
-                    <span 
-                      data-testid="resilient-mode-indicator"
-                      className="text-[9px] font-black uppercase tracking-tighter text-amber-500"
-                    >
-                      {syncQueueSize} Registry Events Buffering
-                    </span>
-                    <button 
-                      onClick={reconcile}
-                      disabled={isSyncing}
-                      className="ml-2 px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded text-[8px] font-black text-amber-500 flex items-center gap-1 hover:bg-amber-500/20 transition-all uppercase"
-                    >
-                      {isSyncing ? <RefreshCw className="w-2 h-2 animate-spin" /> : <RefreshCw className="w-2 h-2" />}
-                      Reconcile
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span 
-                      data-testid="certified-registry-indicator"
-                      className="text-[9px] font-black uppercase tracking-tighter text-slate-400"
-                    >
-                      Registry Certified
-                    </span>
-                  </div>
-                )}
-             </div>
-          </div>
-          <div className="flex items-center gap-6">
-             <div className="flex items-center gap-2">
-                <span className="text-[9px] font-black uppercase tracking-tighter text-slate-400">
-                  {process.env.NEXT_PUBLIC_SKIP_AUTH === 'true' ? 'Sovereign Operator' : 'Not signed in'}
-                </span>
-                {process.env.NEXT_PUBLIC_SKIP_AUTH === 'true' ? (
-                  <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-tighter text-emerald-500">
-                    <ShieldCheck className="w-3 h-3" />
-                    Authorized
-                  </div>
-                ) : (
-                  <button className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-tighter text-emerald-500 hover:text-emerald-400 transition-colors">
-                    <LogIn className="w-3 h-3" />
-                    Sign in
-                  </button>
-                )}
-             </div>
-          </div>
-        </div>
+      {/* Main area (everything right of sidebar) */}
+      <div className="flex-1 flex flex-col ml-64 min-w-0 overflow-hidden">
 
-        {/* Diagnostic Terminal Header */}
-        <AnimatePresence>
-          {diagnostic && (
-            <motion.div 
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className={`px-12 py-3 border-b border-white/5 flex items-center justify-between ${
-                diagnostic.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-500' : 'bg-amber-500/10 text-amber-500'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Terminal className="w-4 h-4" />
-                <span className="text-[10px] font-black uppercase tracking-widest">{diagnostic.title}:</span>
-                <span className="text-xs font-bold leading-none">{diagnostic.directive}</span>
-              </div>
-              {diagnostic.action_label && (
-                <button className="px-3 py-1 bg-current text-white rounded text-[10px] font-black uppercase tracking-tighter hover:scale-105 transition-transform">
-                  {diagnostic.action_label}
-                </button>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <header className="flex items-center justify-between px-12 py-8 transition-colors duration-500">
-          <div className="flex items-center gap-12">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20">
-                <Sun className="w-5 h-5 text-emerald-500" />
-              </div>
-              <div>
-                <h1 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white leading-none mb-1">
-                  Registry Operations
-                </h1>
-                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] animate-pulse">Alpha Pilot Ready</p>
-              </div>
+        {/* ── Header ── */}
+        <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-slate-100 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-yellow-100 rounded-full flex items-center justify-center">
+              <Sun className="w-5 h-5 text-yellow-500" />
             </div>
+            <h1 className="text-lg font-bold text-slate-800">Welcome Back!</h1>
+          </div>
 
-            <div className="hidden lg:flex items-center gap-8">
-               <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">System Uptime</span>
-                  <div className="flex items-center gap-2">
-                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                     <span className="text-xs font-black text-slate-900 dark:text-white tracking-tighter">99.99%</span>
-                  </div>
-               </div>
-               <div className="w-[1px] h-6 bg-slate-200 dark:bg-white/10" />
-               <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Sync Latency</span>
-                  <div className="flex items-center gap-2">
-                     <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
-                     <span className="text-xs font-black text-slate-900 dark:text-white tracking-tighter">24ms</span>
-                  </div>
-               </div>
-            </div>
+          <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
+            <Sun className="w-4 h-4 text-yellow-400" />
+            <span>{clock} · Sunny | 75°F</span>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-3 mr-4">
-              <button 
-                title="Notifications"
-                className="p-2.5 bg-white dark:bg-white/5 shadow-sm border border-slate-100 dark:border-white/10 rounded-xl text-slate-400 hover:text-emerald-500 transition-colors"
+            {syncQueueSize > 0 && (
+              <button
+                type="button"
+                onClick={reconcile}
+                disabled={isSyncing}
+                title={`${syncQueueSize} changes pending sync`}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 text-xs font-medium hover:bg-amber-100 transition-colors"
               >
-                <Bell className="w-5 h-5" />
+                <RefreshCw className={`w-3 h-3 ${isSyncing ? "animate-spin" : ""}`} />
+                {syncQueueSize} pending
               </button>
-              <ThemeToggle />
-            </div>
-            <div className="w-[1px] h-8 bg-slate-200 dark:bg-white/5 mr-4" />
-            <div className="flex items-center gap-3">
-              <div 
-                title="Account Settings"
-                className="w-10 h-10 bg-slate-200 dark:bg-white/10 rounded-xl overflow-hidden border-2 border-white dark:border-white/10 shadow-md"
-              >
-                <User className="w-full h-full p-2 text-slate-400" />
-              </div>
+            )}
+            <button type="button" title="Notifications" className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-50 border border-slate-100 text-slate-500 hover:bg-slate-100 transition-colors">
+              <Bell className="w-4 h-4" />
+            </button>
+            <button type="button" title="Plants" className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-50 border border-slate-100 text-slate-500 hover:bg-slate-100 transition-colors">
+              <Leaf className="w-4 h-4" />
+            </button>
+            <div className="w-9 h-9 bg-slate-200 rounded-full overflow-hidden flex items-center justify-center border border-slate-200">
+              <User className="w-5 h-5 text-slate-400" />
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto custom-scrollbar p-12 flex gap-12">
-          <div className="flex-1 flex flex-col gap-12 min-w-0">
-            {/* My Specimens Hero Section (Phase 10) */}
-            {activeTab === 'inventory' && (
-              <section className="relative min-h-[400px] p-16 rounded-[4rem] bg-emerald-500 dark:bg-emerald-600 overflow-hidden shadow-2xl shadow-emerald-500/20 group flex flex-col justify-center">
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 mix-blend-overlay" />
-                <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:scale-110 transition-transform duration-1000">
-                   <Sun className="w-64 h-64 text-white" />
-                </div>
-                
-                <div className="relative z-10 max-w-2xl">
-                   <h2 className="text-7xl font-black text-black tracking-tighter mb-6 leading-[0.8]">
-                     My Specimens.
-                   </h2>
-                   <p className="text-2xl font-bold text-black/60 leading-relaxed mb-12 max-w-lg">
-                     Track your specimens and keep them healthy with GrowKeeper Biological Intelligence.
-                   </p>
-                   <button 
-                      id="hero-add-specimen-btn"
-                      onClick={() => {
-                        console.log("Triggering Add Specimen Wizard...");
-                        setIsAddWizardOpen(true);
-                      }}
-                      className="flex items-center gap-4 px-12 py-6 bg-black text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:scale-105 active:scale-95 transition-all shadow-2xl"
-                   >
-                     <Plus className="w-5 h-5 text-emerald-400" />
-                     Add New Specimen
-                   </button>
-                </div>
-              </section>
-            )}
+        {/* ── Body: scrollable main + fixed right panel ── */}
+        <div className="flex flex-1 min-h-0">
 
-            {activeTab === 'inventory' && (
-              <KPIStrip 
-                kpis={stats.kpis} 
-                activeFilter={activeFilter}
-                onFilterChange={setActiveFilter}
-              />
-            )}
+          {/* Scrollable main content */}
+          <main className="flex-1 overflow-y-auto p-8 space-y-8">
 
-            <div className="flex flex-col gap-8">
-                        <p className="max-w-xl mx-auto text-sm font-bold leading-relaxed text-slate-400 dark:text-white/40 italic">
-                           &quot;Unified monitoring for biological systems—from spore to canopy.&quot;
-                        </p>
-                        <div className="flex flex-wrap justify-center gap-4 mt-8">
-                           <div className="flex items-center gap-2 px-4 py-2 border rounded-full bg-slate-950 border-white/5 shadow-2xl">
-                              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500/80">System Uptime: 99.99%</span>
-                           </div>
-                           <div className="flex items-center gap-2 px-4 py-2 border rounded-full bg-slate-950 border-white/5 shadow-2xl">
-                              <div className={`w-2 h-2 rounded-full animate-pulse ${syncQueueSize > 0 ? 'bg-amber-500' : 'bg-cyan-500'}`} />
-                              <span className={`text-[10px] font-black uppercase tracking-widest ${syncQueueSize > 0 ? 'text-amber-500/80' : 'text-cyan-500/80'}`}>
-                                {syncQueueSize > 0 ? `Registry Buffering: ${syncQueueSize} Ops` : 'Cloud Sync Active'}
-                              </span>
-                           </div>
-                        </div>
+            {/* KPI Strip */}
+            <KPIStrip kpis={stats.kpis} />
 
-              <AnimatePresence mode="wait">
-                {activeTab === 'inventory' ? (
-                  <motion.div 
-                    key="inventory"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="w-full"
-                  >
-                    {(specimensLoading || tasksLoading) ? (
-                      <div className="space-y-8">
-                        <SpecimenListSkeleton />
-                      </div>
-                    ) : (specimens.length === 0 && errorMessage) ? (
-                       <div className="flex flex-col items-center justify-center py-24 px-12 bg-white dark:bg-white/5 rounded-[3.5rem] border border-dashed border-slate-200 dark:border-white/10 text-center group">
-                         <div className="w-24 h-24 bg-slate-50 dark:bg-white/5 rounded-[2.5rem] flex items-center justify-center mb-8 border border-slate-100 dark:border-white/5 group-hover:scale-110 transition-transform">
-                            <Terminal className="w-10 h-10 text-slate-300 dark:text-white/20" />
-                         </div>
-                         <div className="space-y-4">
-                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Registry Sync Internalized</h3>
-                            <p className="text-sm font-bold text-slate-400 dark:text-white/30 max-w-sm mx-auto leading-relaxed">
-                              Cloud backbone is unreachable. System has shifted authority to the <span className="text-emerald-500 font-black">Local Audit Ledger</span>. 
-                              {syncQueueSize > 0 && <span className="block mt-2 text-amber-500 font-black uppercase tracking-widest text-[10px]">{syncQueueSize} local operations queued for reconciliation.</span>}
-                              {!errorMessage?.includes("SENTINEL") && <span className="block mt-2 text-red-500/50">Connectivity Fault Detected.</span>}
-                            </p>
-                            {syncQueueSize > 0 && (
-                              <div className="flex gap-2 justify-center">
-                                <button 
-                                  onClick={reconcile}
-                                  disabled={isSyncing}
-                                  className="mt-6 px-10 py-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-[10px] font-black text-emerald-500 flex items-center gap-2 hover:bg-emerald-500/20 transition-all uppercase"
-                                >
-                                  {isSyncing ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                                  Manual Reconcile Attempt
-                                </button>
-                                <button 
-                                  onClick={exportQueuedData}
-                                  className="mt-6 px-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-white/40 flex items-center gap-2 hover:bg-white/10 transition-all uppercase"
-                                  title="Export unsynced data for recovery"
-                                >
-                                  <Download className="w-3 h-3" />
-                                </button>
-                              </div>
-                            )}
-                         </div>
-                      </div>
-                    ) : specimens.length === 0 ? (
-                       <div className="flex flex-col items-center justify-center py-24 px-12 bg-white dark:bg-white/5 rounded-[3.5rem] border border-dashed border-slate-200 dark:border-white/10 text-center group">
-                         <div className="w-24 h-24 bg-slate-50 dark:bg-white/5 rounded-[2.5rem] flex items-center justify-center mb-8 border border-slate-100 dark:border-white/5 group-hover:scale-110 transition-transform">
-                            <Terminal className="w-10 h-10 text-slate-300 dark:text-white/20" />
-                         </div>
-                         <div className="flex flex-col gap-12">
-                            <motion.div 
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-[3.5rem] p-12 shadow-2xl shadow-emerald-900/5 relative overflow-hidden"
-                            >
-                               <MycelialIllustration />
-                               
-                               <div className="flex justify-center gap-6 mt-8 relative z-10">
-                                  <button 
-                                     onClick={() => setIsAddWizardOpen(true)}
-                                     className="px-10 py-4 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-emerald-700 dark:hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20"
-                                  >
-                                     Start First Culture
-                                  </button>
-                               </div>
-                            </motion.div>
+            {/* Plant Overview */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-bold text-slate-800">Plant Overview</h2>
+                <button
+                  type="button"
+                  onClick={() => setIsAddWizardOpen(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-green-700 text-white text-sm font-medium rounded-xl hover:bg-green-800 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Plant
+                </button>
+              </div>
 
-                            <SystemSuggestions onStartWizard={() => setIsAddWizardOpen(true)} />
-                         </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
-                        {filteredSpecimens.map(s => (
-                          <SpecimenSummaryCard 
-                            key={s.id} 
-                            specimen={s} 
-                            tasks={tasks}
-                            envSignals={envSignals.filter(sig => sig.specimen_id === s.id)}
-                            onClick={() => setSelectedSpecimenId(s.id)}
-                            active={selectedSpecimenId === s.id}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </motion.div>
-                ) : activeTab === 'compliance' ? (
-                  <motion.div 
-                    key="compliance"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    className="h-full"
-                  >
-                    <ComplianceView specimen={selectedSpecimen || (specimens[0] as SpecimenRow)} />
-                  </motion.div>
-                ) : (
-                  <motion.div 
-                    key="simulation" 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="h-full"
-                  >
-                    <div className="mb-6 flex items-center justify-between">
-                       <h3 className="text-sm font-black uppercase tracking-widest text-white/40">Adversarial Engine Core</h3>
-                       <div className="flex items-center gap-2 px-3 py-1 rounded border border-emerald-500/30 bg-emerald-500/10">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Engine Online: Ready for Mission</span>
-                       </div>
+              {(specimensLoading || tasksLoading) ? (
+                <SpecimenListSkeleton />
+              ) : displayError && specimens.length === 0 ? (
+                <div className="bg-white rounded-2xl p-8 text-center border border-slate-100">
+                  <p className="text-slate-500 text-sm mb-4">{displayError}</p>
+                  {syncQueueSize > 0 && (
+                    <div className="flex justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={reconcile}
+                        disabled={isSyncing}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-700 text-white rounded-xl text-sm font-medium hover:bg-green-800 transition-colors"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
+                        Sync now
+                      </button>
+                      <button
+                        type="button"
+                        onClick={exportQueuedData}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-200 transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        Export
+                      </button>
                     </div>
-                    <AdversarialSimulatorTab />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                  )}
+                </div>
+              ) : specimens.length === 0 ? (
+                <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-slate-200">
+                  <p className="text-slate-500 text-sm mb-4">No plants yet. Add your first one!</p>
+                  <SystemSuggestions onStartWizard={() => setIsAddWizardOpen(true)} />
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {specimens.slice(0, 8).map((s) => (
+                    <SpecimenSummaryCard
+                      key={s.id}
+                      specimen={s}
+                      onClick={() => setSelectedSpecimenId(s.id)}
+                      active={selectedSpecimenId === s.id || (!selectedSpecimenId && specimens[0]?.id === s.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
 
-            {activeTab === 'inventory' && <TipsSection />}
-          </div>
-
-          <AnimatePresence>
-            {selectedSpecimen && (
-              <motion.div
-                initial={{ x: '100%', opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: '100%', opacity: 0 }}
-                transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                className="w-[480px] h-full flex flex-col gap-8 flex-shrink-0"
-              >
-                <DetailRail 
-                  specimen={selectedSpecimen} 
-                  tasks={tasks}
-                  onClose={() => setSelectedSpecimenId(null)} 
-                  onOpenCompliance={handleOpenCompliance}
-                />
-                
-                {/* Integrity Timeline Memory Card */}
-                {narrative && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-3xl p-6 shadow-xl"
+            {/* Tips & Articles */}
+            <section>
+              <h2 className="text-base font-bold text-slate-800 mb-4">Tips &amp; Articles</h2>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { title: "Propagation Tips", img: ARTICLE_IMAGES[0] },
+                  { title: "Low Light Plants", img: ARTICLE_IMAGES[1] },
+                ].map((article) => (
+                  <button
+                    key={article.title}
+                    type="button"
+                    className="group relative h-40 rounded-2xl overflow-hidden text-left"
                   >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                        <h3 className="text-xs font-black uppercase tracking-widest">Integrity Narrative</h3>
-                      </div>
-                      <Badge variant={narrative.confidence_label === 'HIGH' ? 'success' : 'warning'}>
-                        {narrative.confidence_label} CONFIDENCE
-                      </Badge>
+                    <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105">
+                      <NextImage src={article.img} alt={article.title} fill className="object-cover" unoptimized />
                     </div>
-                    
-                    <p className="text-xs font-bold text-slate-400 dark:text-white/40 leading-relaxed mb-6 italic">
-                      &quot;{narrative.summary}&quot;
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-5 py-4">
+                      <span className="text-sm font-bold text-white">{article.title}</span>
+                      <div className="w-7 h-7 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30">
+                        <ChevronRight className="w-4 h-4 text-white" />
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          </main>
+
+          {/* ── Right Panel: Plant Details ── */}
+          <aside className="w-72 flex-shrink-0 bg-white border-l border-slate-100 overflow-y-auto">
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-bold text-slate-800">Plant Details</h2>
+                <ChevronRight className="w-4 h-4 text-slate-400 rotate-90" />
+              </div>
+
+              {selectedSpecimen ? (
+                <>
+                  {/* Plant photo */}
+                  <div className="relative w-full aspect-square rounded-2xl overflow-hidden mb-4 bg-slate-100">
+                    <Image
+                      src={selectedSpecimen.image_url || FALLBACK_DETAIL_IMG}
+                      alt={selectedSpecimen.nickname}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
+
+                  {/* Name */}
+                  <h3 className="font-bold text-slate-800 text-base leading-tight">
+                    {selectedSpecimen.nickname}
+                  </h3>
+                  {selectedSpecimen.species_name && (
+                    <p className="text-xs text-slate-400 mt-0.5 mb-4">
+                      {selectedSpecimen.species_name}
                     </p>
+                  )}
 
-                    <div className="space-y-3">
-                      {narrative.timeline.slice(0, 5).map(event => (
-                        <div key={event.id} className="flex gap-3 text-[10px]">
-                          <div className={`w-1 h-auto rounded-full ${event.is_integrity_event ? 'bg-red-500' : 'bg-emerald-500'}`} />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-slate-900 dark:text-white font-bold">{event.description}</p>
-                              {event.sync_status === 'BUFFERED_LOCAL' ? (
-                                <div 
-                                  key={`uncertified-${event.id}`}
-                                  data-testid="integrity-badge-uncertified"
-                                  className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20"
-                                >
-                                  <RefreshCw className="w-2 h-2 text-orange-500 animate-spin-slow" />
-                                  <span className="text-[7px] font-black text-orange-500 uppercase tracking-tighter">UNCERTIFIED</span>
-                                </div>
-                              ) : (
-                                <div 
-                                  key={`certified-${event.id}`}
-                                  data-testid="integrity-badge-certified"
-                                  className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20"
-                                >
-                                  <ShieldCheck className="w-2 h-2 text-emerald-500" />
-                                  <span className="text-[7px] font-black text-emerald-500 uppercase tracking-tighter">CERTIFIED</span>
-                                </div>
+                  {/* Care details */}
+                  <div className="border-t border-slate-100 pt-4 space-y-3 mb-4">
+                    {[
+                      {
+                        icon: MapPin,
+                        iconBg: "bg-green-100",
+                        iconColor: "text-green-600",
+                        label: "Location",
+                        value: selectedSpecimen.location || "Not set",
+                      },
+                      {
+                        icon: Sun,
+                        iconBg: "bg-yellow-100",
+                        iconColor: "text-yellow-600",
+                        label: "Light",
+                        value: (selectedSpecimen as SpecimenRow & { light?: string }).light || "Bright, Indirect",
+                      },
+                      {
+                        icon: Droplets,
+                        iconBg: "bg-blue-100",
+                        iconColor: "text-blue-500",
+                        label: "Watering",
+                        value: (selectedSpecimen as SpecimenRow & { watering?: string }).watering || "Every 1 Week",
+                      },
+                      {
+                        icon: Flower2,
+                        iconBg: "bg-orange-100",
+                        iconColor: "text-orange-500",
+                        label: "Fertilizer",
+                        value: (selectedSpecimen as SpecimenRow & { fertilizer?: string }).fertilizer || "Monthly",
+                      },
+                    ].map((row) => (
+                      <div key={row.label} className="flex items-center gap-3">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${row.iconBg}`}>
+                          <row.icon className={`w-3.5 h-3.5 ${row.iconColor}`} />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-xs font-medium text-slate-500">{row.label}: </span>
+                          <span className="text-xs text-slate-700 font-semibold">{row.value}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Care Reminders */}
+                  {pendingTasks.length > 0 && (
+                    <div className="border-t border-slate-100 pt-4">
+                      <h4 className="text-xs font-bold text-slate-700 mb-3">Care Reminders</h4>
+                      <div className="space-y-2.5">
+                        {pendingTasks.map((t: TaskRow) => {
+                          const daysUntil = t.due_date
+                            ? Math.ceil((new Date(t.due_date).getTime() - Date.now()) / 86400000)
+                            : null;
+                          const overdue = daysUntil !== null && daysUntil < 0;
+                          return (
+                            <div key={t.id} className="flex items-center gap-3">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${overdue ? "bg-red-100" : "bg-blue-100"}`}>
+                                <Droplets className={`w-3.5 h-3.5 ${overdue ? "text-red-500" : "text-blue-500"}`} />
+                              </div>
+                              <span className="text-xs text-slate-700 font-medium flex-1 capitalize">{t.task_type}</span>
+                              {daysUntil !== null && (
+                                <span className={`text-xs font-semibold ${overdue ? "text-red-500" : "text-slate-400"}`}>
+                                  {overdue ? `${Math.abs(daysUntil)}d late` : daysUntil === 0 ? "Today" : `in ${daysUntil}d`}
+                                </span>
                               )}
                             </div>
-                            <p className="text-slate-400 dark:text-white/20 uppercase tracking-tighter font-medium">
-                              {new Date(event.timestamp).toLocaleTimeString()} • {event.provenance}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </motion.div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence>
-            {isComplianceOpen && complianceSpecimen && (
-              <ComplianceSurface 
-                specimen={complianceSpecimen} 
-                onClose={() => setIsComplianceOpen(false)} 
-              />
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence>
-            {isAddWizardOpen && (
-               <AddSpecimenForm 
-                  isOpen={isAddWizardOpen} 
-                  onClose={() => setIsAddWizardOpen(false)} 
-               />
-            )}
-          </AnimatePresence>
-        </main>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mb-3">
+                    <Leaf className="w-6 h-6 text-green-400" />
+                  </div>
+                  <p className="text-sm text-slate-400">Select a plant to see details</p>
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>
       </div>
+
+      {/* Add plant wizard */}
+      <AnimatePresence>
+        {isAddWizardOpen && (
+          <AddSpecimenForm
+            isOpen={isAddWizardOpen}
+            onClose={() => setIsAddWizardOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

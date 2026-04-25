@@ -227,7 +227,7 @@ export async function getSpecimens(): Promise<ActionResult<SpecimenRow[]>> {
   const auth = await getAuthenticatedUser();
 
   if (!auth.success) {
-    return { success: false, data: null, error: "Authentication required." };
+    return { success: false, data: null, error: "Authentication required. Please sign in." };
   }
 
   const supabase = createClient();
@@ -262,7 +262,7 @@ export async function getSpecimenById(id: string): Promise<ActionResult<Specimen
   const auth = await getAuthenticatedUser();
 
   if (!auth.success) {
-    return { success: false, data: null, error: "Authentication required." };
+    return { success: false, data: null, error: "Authentication required. Please sign in." };
   }
 
   const supabase = createClient();

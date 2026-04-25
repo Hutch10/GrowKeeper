@@ -13,10 +13,11 @@ export default async function NewSpecimenPage() {
 
   const auth = await getAuthenticatedUser();
   // ... rest (legacy fallback)
+  return (
     <main className="min-h-screen bg-brand-warm font-[family-name:var(--font-geist-sans)] text-brand-dark">
       <PageShell
-        title="Add New Specimen"
-        subtitle="Add a new specimen to your collection"
+        title="Add New Plant"
+        subtitle="Add a new plant to your collection"
       >
         <nav className="mb-2">
           <Link
@@ -35,7 +36,7 @@ export default async function NewSpecimenPage() {
                 clipRule="evenodd"
               />
             </svg>
-            Back to Specimens
+            Back to Plants
           </Link>
         </nav>
 

@@ -22,6 +22,8 @@ import Image from "next/image";
 import { useSpecimenData } from "@/hooks/use-specimen-data";
 import { useSyncMutation } from "@/hooks/use-mutation";
 import { useSystemLog } from "@/hooks/use-system-log";
+import { useIdentification } from "@/hooks/use-identification";
+import { Loader2, Sparkles } from "lucide-react";
 
 const STEPS = [
   { id: "kingdom", title: "Kingdom", icon: Leaf },
@@ -55,7 +57,9 @@ interface AddSpecimenFormProps {
 export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
   const router = useRouter();
   const { addSpecimen } = useSpecimenData();
-  const { addLog } = useSystemLog();
+   const { addLog } = useSystemLog();
+  const { identify, isIdentifying } = useIdentification();
+  const [aiSuggestedFields, setAiSuggestedFields] = useState<Set<string>>(new Set());
   const { mutate: performAdd, isPending } = useSyncMutation(addSpecimen);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
@@ -94,7 +98,7 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
 
   if (isOpen === false) return null;
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setImage(file);
@@ -103,6 +107,31 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+
+      // Trigger AI Identification
+      addLog(`[SENTINEL] Initiating biometric identification...`, 'sentinel');
+      const result = await identify(file);
+      
+      if (result) {
+        addLog(`[SENTINEL] Identification successful: ${result.scientificName} (${result.confidence}% confidence)`, 'sentinel');
+        
+        // Populate fields
+        if (result.kingdom) setKingdom(result.kingdom as "Plantae" | "Fungi" | "Animalia");
+        if (result.commonName) setNickname(result.commonName);
+        if (result.scientificName) setSpeciesName(result.scientificName);
+        
+        if (result.careGuide) {
+          if (result.careGuide.light) setLight(result.careGuide.light);
+          if (result.careGuide.watering_or_misting) setWatering(result.careGuide.watering_or_misting);
+          if (result.careGuide.substrate_or_soil) setSubstrate(result.careGuide.substrate_or_soil);
+        }
+
+        setAiSuggestedFields(new Set(['kingdom', 'nickname', 'speciesName', 'light', 'watering', 'substrate']));
+        toast.success(`Sentinel identifies this as ${result.commonName}.`);
+        
+        // Transition to identity step automatically if we were on kingdom
+        if (currentStep === 0) setCurrentStep(1);
+      }
     }
   };
 
@@ -251,7 +280,9 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
           <div className="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500">
             <div className="text-center space-y-4">
               <h3 className="text-5xl font-black text-slate-800 dark:text-white tracking-tighter uppercase mb-2">Choose Your Path</h3>
-              <p className="text-xl font-bold text-slate-400 dark:text-white/20">Select the kingdom of your new specimen.</p>
+              <p className="text-xl font-bold text-slate-400 dark:text-white/20">
+                {aiSuggestedFields.has('kingdom') ? "Sentinel has preemptively classified this specimen." : "Select the kingdom of your new specimen."}
+              </p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -293,15 +324,23 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
                 <div className={`w-56 h-56 rounded-[4rem] border-2 border-dashed transition-all duration-700 flex flex-col items-center justify-center overflow-hidden bg-slate-50 dark:bg-white/5 ${
                   imagePreview ? "border-emerald-500 scale-105" : "border-slate-200 dark:border-white/10 group-hover:border-emerald-500/50"
                 }`}>
-                  {imagePreview ? (
+                   {imagePreview ? (
                     <Image src={imagePreview} alt="Preview" fill unoptimized className="object-cover" />
                   ) : (
                     <div className="flex flex-col items-center gap-4 text-slate-300 dark:text-white/10 font-black">
-                      <Camera className="w-12 h-12" />
-                      <span className="text-[10px] uppercase tracking-[0.3em]">Add Portrait</span>
+                      {isIdentifying ? <Loader2 className="w-12 h-12 animate-spin text-emerald-500" /> : <Camera className="w-12 h-12" />}
+                      <span className="text-[10px] uppercase tracking-[0.3em]">{isIdentifying ? "Analyzing..." : "Add Portrait"}</span>
                     </div>
                   )}
-                  <input type="file" accept="image/*" onChange={onFileChange} className="absolute inset-0 opacity-0 cursor-pointer" aria-label="Upload specimen photo" />
+                  {isIdentifying && (
+                    <div className="absolute inset-0 bg-emerald-500/10 backdrop-blur-sm flex items-center justify-center">
+                       <div className="flex flex-col items-center gap-2">
+                          <Sparkles className="w-8 h-8 text-emerald-500 animate-pulse" />
+                          <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Sentinel Identification</span>
+                       </div>
+                    </div>
+                  )}
+                  <input type="file" accept="image/*" onChange={onFileChange} className="absolute inset-0 opacity-0 cursor-pointer" aria-label="Upload specimen photo" disabled={isIdentifying} />
                 </div>
               </div>
               <div className="text-center">
@@ -311,8 +350,16 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-12">
-              <div className="space-y-4">
-                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 ml-6">Nickname *</label>
+               <div className="space-y-4">
+                <div className="flex items-center justify-between ml-6">
+                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20">Nickname *</label>
+                  {aiSuggestedFields.has('nickname') && (
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-black text-emerald-500 uppercase">
+                      <Sparkles className="w-2.5 h-2.5" />
+                      AI Suggested
+                    </div>
+                  )}
+                </div>
                 <input
                   type="text"
                   value={nickname}
@@ -329,7 +376,15 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
                 />
               </div>
               <div className="space-y-4">
-                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 ml-6">Scientific Name</label>
+                <div className="flex items-center justify-between ml-6">
+                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20">Scientific Name</label>
+                  {aiSuggestedFields.has('speciesName') && (
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-black text-emerald-500 uppercase">
+                      <Sparkles className="w-2.5 h-2.5" />
+                      AI Detected
+                    </div>
+                  )}
+                </div>
                 <input
                   type="text"
                   value={speciesName}
@@ -353,9 +408,17 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 px-12">
               <div className="space-y-6">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 mb-6 ml-6">
-                    {kingdom === "Plantae" ? "Watering Frequency" : "Misting Frequency"}
-                  </label>
+                  <div className="flex items-center justify-between mb-6 ml-6">
+                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20">
+                      {kingdom === "Plantae" ? "Watering Frequency" : "Misting Frequency"}
+                    </label>
+                    {aiSuggestedFields.has('watering') && (
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-black text-emerald-500 uppercase">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        AI Protocol
+                      </div>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     {WATERING_OPTIONS.map(option => (
                       <button
@@ -379,7 +442,15 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
               <div className="space-y-8">
                 {kingdom === "Plantae" ? (
                   <div>
-                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 mb-6 ml-6">Lighting Exposure</label>
+                    <div className="flex items-center justify-between mb-6 ml-6">
+                      <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20">Lighting Exposure</label>
+                      {aiSuggestedFields.has('light') && (
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-[8px] font-black text-amber-500 uppercase">
+                          <Sparkles className="w-2.5 h-2.5" />
+                          AI Verified
+                        </div>
+                      )}
+                    </div>
                     <div className="space-y-3">
                       {LIGHT_OPTIONS.map(option => (
                         <button

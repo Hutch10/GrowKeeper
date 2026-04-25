@@ -38,17 +38,29 @@ export function normalizeActionError(error: unknown): NormalizedError {
       case "P0001": // Custom RAISE EXCEPTION
         friendlyMessage = rawMessage || "[POLICY_VIOLATION] The action was rejected by the RAIS configuration.";
         break;
+      case "42P01": // Undefined table
+        friendlyMessage = "[SYSTEM_MISMATCH] Required registry table not found. Verify Supabase migrations have been executed.";
+        break;
     }
   }
 
   // Network / Auth Errors
-  if (rawMessage.includes("fetch failed")) {
+  if (rawMessage.includes("fetch failed") || rawMessage.includes("NetworkError")) {
     friendlyMessage = "[SENTINEL] Registry transmission failed. Please check your uplink connection.";
     isRetryable = true;
   }
 
-  if (rawMessage.includes("JWT expired") || rawMessage.includes("Auth session missing")) {
+  if (rawMessage.includes("relation") && (rawMessage.includes("does not exist") || rawMessage.includes("not found"))) {
+    friendlyMessage = "[SYSTEM_MISMATCH] Database relation not found. Ensure the schema is synchronized.";
+  }
+
+  if (rawMessage.includes("JWT expired") || rawMessage.includes("Auth session missing") || rawMessage.includes("Not signed in")) {
     friendlyMessage = "[PROTOCOL_EXPIRED] Session invalidated: Re-authentication required for registry access.";
+  }
+
+  // If we still have a generic message but a raw message exists, provide a hint
+  if (friendlyMessage.includes("Unexpected operational failure") && rawMessage) {
+    friendlyMessage = `[CRITICAL] Operational failure: ${rawMessage.length > 100 ? rawMessage.substring(0, 100) + "..." : rawMessage}`;
   }
 
   return {

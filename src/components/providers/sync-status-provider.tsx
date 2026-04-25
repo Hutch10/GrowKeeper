@@ -19,27 +19,16 @@ export function SyncStatusProvider({ children }: { children: ReactNode }) {
   const [lastError, setLastError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Initialize Operation Queue Sync
-    const initSync = async () => {
-      const { operationQueue } = await import("@/lib/services/operation-queue");
-      
-      // Initial process if online
-      if (navigator.onLine) {
-        operationQueue.processQueue();
-      }
-
-      const handleOnline = () => {
-        toast.success("Network connection restored. Syncing field operations...");
-        operationQueue.processQueue();
-      };
-
-      window.addEventListener('online', handleOnline);
-      return () => window.removeEventListener('online', handleOnline);
+    const handleOnline = () => {
+      toast.success("Connection restored.");
+      setStatus("idle");
     };
-
-    const cleanupPromise = initSync();
+    const handleOffline = () => setStatus("error");
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
     return () => {
-      cleanupPromise.then(cleanup => cleanup && cleanup());
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 

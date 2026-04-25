@@ -40,8 +40,8 @@ export default async function AnalyticsPage() {
 
   const careByDay = last7Days.map(day => {
     const dayStr = format(day, 'yyyy-MM-dd');
-    const count = specimenEvents.filter(e => 
-      format(new Date(e.created_at), 'yyyy-MM-dd') === dayStr
+    const count = specimenEvents.filter(e =>
+      e.created_at && format(new Date(e.created_at), 'yyyy-MM-dd') === dayStr
     ).length;
     return {
       date: format(day, 'EEE'),
@@ -70,7 +70,7 @@ export default async function AnalyticsPage() {
 
   // Specimens added over time
   const specimensByMonth = specimens.reduce((acc, specimen) => {
-    const month = format(new Date(specimen.created_at), 'MMM yyyy');
+    const month = specimen.created_at ? format(new Date(specimen.created_at), 'MMM yyyy') : 'Unknown';
     acc[month] = (acc[month] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);

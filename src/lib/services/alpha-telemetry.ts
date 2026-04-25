@@ -15,6 +15,7 @@ export type ProjectEventType =
   | "biological_event_logged"
   | "agent_proposal_submitted"
   | "agent_proposal_accepted"
+  | "sensor_calibrated"
   | "system_error";
 
 export async function trackAlphaEvent(

@@ -70,7 +70,7 @@ export class EnvironmentalSentinel {
       AuditSentinel.validateTransition('ACTIVE', 'SUPERSEDED', 'ENV_SENTINEL_SUPERSESSION');
       await supabase
         .from('environmental_signals')
-        .update({ status: 'SUPERSEDED', updated_at: now })
+        .update({ status: 'SUPPRESSED', updated_at: now })
         .eq('specimen_id', specimen_id)
         .eq('status', 'ACTIVE');
     }

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { specimensDB, fromPouch, toPouch } from '@/lib/pouchdb';
-import { p2pSync } from '@/lib/p2p-sync';
 import type { Specimen } from '@/types/specimen';
 
 export function useSpecimens(initialData: Specimen[] = []) {
@@ -68,17 +67,12 @@ export function useSpecimens(initialData: Specimen[] = []) {
 
   const addSpecimenLocal = async (specimen: Specimen) => {
     await specimensDB.put(toPouch(specimen));
-    p2pSync.broadcastSpecimen(specimen);
   };
 
   const updateSpecimenLocal = async (specimen: Specimen) => {
     const doc = await specimensDB.get(specimen.id);
-    const updated = {
-      ...toPouch(specimen),
-      _rev: doc._rev
-    };
+    const updated = { ...toPouch(specimen), _rev: doc._rev };
     await specimensDB.put(updated);
-    p2pSync.broadcastSpecimen(fromPouch<Specimen>(updated));
   };
 
   const deleteSpecimenLocal = async (id: string) => {

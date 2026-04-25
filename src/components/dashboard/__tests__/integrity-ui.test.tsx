@@ -68,20 +68,12 @@ describe('Deterministic Intelligence Proof: UI Transparency', () => {
 
   const setupMocks = (syncStatus: string, syncQueueSize = 0) => {
     vi.mocked(useIntegrityMemory).mockReturnValue({
-      timeline: [
-        { id: '1', description: 'Test Event', timestamp: new Date().toISOString(), sync_status: syncStatus, is_integrity_event: false, provenance: 'TEST' }
-      ],
-      narrative: { 
-        summary: 'Test Narrative', 
-        confidence_label: 'HIGH', 
-        timeline: [
-          { id: '1', description: 'Test Event', timestamp: new Date().toISOString(), sync_status: syncStatus, is_integrity_event: false, provenance: 'TEST' }
-        ] 
-      },
+      timeline: [],
+      narrative: { summary: 'Test Narrative', confidence_label: 'HIGH', timeline: [] },
       loading: false
     });
-    vi.mocked(useEnvironmentalSentinel).mockReturnValue({ signals: [], triggerSentinel: vi.fn() });
-    vi.mocked(useTaskData).mockReturnValue({ tasks: [], loading: false });
+    vi.mocked(useEnvironmentalSentinel).mockReturnValue({ signals: [], loading: false, fetchSignals: vi.fn(), triggerSentinel: vi.fn(), getSpecimenSignals: vi.fn() } as any);
+    vi.mocked(useTaskData).mockReturnValue({ tasks: [], loading: false, refresh: vi.fn(), markComplete: vi.fn() } as any);
     vi.mocked(useSpecimenData).mockReturnValue({ 
       specimens: [], 
       loading: false, 

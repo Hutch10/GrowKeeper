@@ -3,8 +3,7 @@
 import { useState, useMemo } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { DashboardHeader } from "@/components/dashboard/header";
-import { SpecimenSummaryCard } from "@/components/dashboard/specimen-summary-card";
-import { SpecimenDetailPanel } from "@/components/dashboard/specimen-detail-panel";
+import { SpecimenSummaryCard } from "@/components/specimens/specimen-summary-card";
 import { Search, Plus } from "lucide-react";
 import Link from "next/link";
 import type { SpecimenRow } from "@/app/actions/types";
@@ -75,8 +74,8 @@ export function SpecimensClient({ initialSpecimens }: SpecimensClientProps) {
 
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-black text-brand-dark mb-2">My Specimen Collection</h1>
-            <p className="text-brand-dark/40 font-bold">{initialSpecimens.length} Specimens Total</p>
+            <h1 className="text-3xl font-black text-brand-dark mb-2">My Plant Collection</h1>
+            <p className="text-brand-dark/40 font-bold">{initialSpecimens.length} Plants Total</p>
           </div>
           
           <Link 
@@ -129,16 +128,16 @@ export function SpecimensClient({ initialSpecimens }: SpecimensClientProps) {
               <div className="w-24 h-24 bg-brand-pink/10 rounded-full flex items-center justify-center mx-auto mb-8">
                 <Plus className="w-12 h-12 text-brand-pink" />
               </div>
-              <h2 className="text-4xl font-black text-brand-dark mb-4">Your Field Collection is Empty</h2>
+              <h2 className="text-4xl font-black text-brand-dark mb-4">Your Collection is Empty</h2>
               <p className="text-xl text-brand-dark/50 font-medium mb-10 leading-relaxed">
-                Start your biological asset management journey. Register your first specimen to begin tracking health metrics, hardware provenance, and autonomous regulation cycles.
+                Start your plant care journey. Add your first plant to begin tracking health, care history, and upcoming tasks.
               </p>
               <Link 
                 href="/plants/new"
                 className="inline-flex items-center gap-4 px-10 py-5 rounded-[2rem] bg-brand-forest text-white text-xl font-black hover:bg-brand-forest/90 transition-all shadow-xl shadow-brand-forest/30 active:scale-95"
               >
                 <Plus className="w-6 h-6" />
-                Add Your First Specimen
+                Add Your First Plant
               </Link>
             </div>
           </div>
@@ -151,7 +150,7 @@ export function SpecimensClient({ initialSpecimens }: SpecimensClientProps) {
               <SpecimenSummaryCard 
                 key={specimen.id}
                 specimen={specimen}
-                isSelected={selectedSpecimenId === specimen.id}
+                active={selectedSpecimenId === specimen.id}
                 onClick={() => setSelectedSpecimenId(specimen.id)}
               />
             ))}
@@ -167,10 +166,12 @@ export function SpecimensClient({ initialSpecimens }: SpecimensClientProps) {
         ) : null}
       </main>
 
-      {/* Right Sidebar Inspector */}
-      <div className="p-4 pr-6 flex items-start sticky top-0 h-screen">
-        <SpecimenDetailPanel specimen={selectedSpecimen} />
-      </div>
+      {selectedSpecimen && (
+        <div className="p-4 pr-6 flex flex-col sticky top-0 h-screen w-72 shrink-0 border-l border-brand-forest/10">
+          <h3 className="font-black text-brand-dark mb-1">{selectedSpecimen.nickname}</h3>
+          <p className="text-sm text-brand-dark/50">{selectedSpecimen.species_name || 'Species unidentified'}</p>
+        </div>
+      )}
 
       <style jsx global>{`
         .no-scrollbar::-webkit-scrollbar {

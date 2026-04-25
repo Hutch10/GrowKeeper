@@ -45,10 +45,7 @@ export async function logBiologicalEvent(input: LogBiologicalEventInput): Promis
     user_id: auth.data.id,
     specimen_id: input.specimen_id,
     event_type: input.event_type,
-    notes: input.notes || null,
-    source_type: input.source_type,
-    confidence: input.confidence ?? 1.0,
-    metadata: (input.metadata || {}) as Json,
+    notes: input.notes ? `[${input.source_type}] ${input.notes}` : null,
     created_at: new Date().toISOString(),
     last_modified: new Date().toISOString(),
     last_action_type: "CREATE",
@@ -75,7 +72,7 @@ export async function logBiologicalEvent(input: LogBiologicalEventInput): Promis
       metadata: { 
         specimen_id: event.specimen_id,
         event_type: event.event_type,
-        source: event.source_type
+        source: input.source_type
       },
       payload: event
     });

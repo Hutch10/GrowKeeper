@@ -73,7 +73,7 @@ export async function testSupabaseConnection(): Promise<DiagnosticResult> {
     const supabase = createClient();
 
     const { error } = await supabase
-      .from("plants")
+      .from("specimens")
       .select("id")
       .limit(1);
 

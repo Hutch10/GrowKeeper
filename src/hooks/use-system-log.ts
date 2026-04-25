@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { createClient } from '@/lib/supabase-browser';
+import { createBrowserSupabaseClient } from '@/lib/supabase-browser';
 
 export interface LogEntry {
   id: string;
@@ -48,7 +48,7 @@ export function useSystemLog() {
      isPollingRef.current = true;
 
      try {
-       const supabase = createClient();
+       const supabase = createBrowserSupabaseClient();
        const { data, error } = await supabase
          .from('alpha_events')
          .select('*')
@@ -56,7 +56,7 @@ export function useSystemLog() {
          .limit(5);
        
        if (data && !error) {
-         data.forEach(event => {
+         (data as { event_type: string; metadata: unknown }[]).forEach(event => {
             const meta = event.metadata as any;
             addLog(
               `[AUDIT] ${event.event_type}: ${meta?.audit_target || 'System event'}`,

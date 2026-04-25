@@ -33,7 +33,7 @@ export function EditSpecimenForm({ specimen, onCancel, onSuccess }: EditSpecimen
       const result = await updateSpecimen({
         id: specimen.id,
         nickname: nickname.trim(),
-        kingdom: specimen.kingdom,
+        kingdom: "Other" as const,
         species_name: speciesName.trim() || undefined,
       });
 

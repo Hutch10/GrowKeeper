@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { addSpecimenTask } from "@/app/actions/tasks";
+import { addTask } from "@/app/actions/tasks";
 import type { TaskType } from "@/types/database";
 
 const TASK_TYPES: { value: TaskType; label: string }[] = [
@@ -14,10 +14,10 @@ const TASK_TYPES: { value: TaskType; label: string }[] = [
 ];
 
 interface AddTaskFormProps {
-  specimenId: string;
+  plantId: string;
 }
 
-export function AddTaskForm({ specimenId }: AddTaskFormProps) {
+export function AddTaskForm({ plantId }: AddTaskFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -32,8 +32,8 @@ export function AddTaskForm({ specimenId }: AddTaskFormProps) {
     const taskType = formData.get("task_type") as TaskType;
     const dueDate = formData.get("due_date") as string;
 
-    const result = await addSpecimenTask({
-      specimen_id: specimenId,
+    const result = await addTask({
+      specimen_id: plantId,
       task_type: taskType,
       due_date: dueDate || undefined,
     });
@@ -53,14 +53,14 @@ export function AddTaskForm({ specimenId }: AddTaskFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="task_type" className="block text-sm font-medium text-brand-green">
+        <label htmlFor="task_type" className="block text-sm font-medium text-slate-700">
           Task Type
         </label>
         <select
           id="task_type"
           name="task_type"
           required
-          className="mt-1 block w-full rounded-md border border-brand-pink-dark px-3 py-2 text-sm focus:border-brand-green focus:outline-none focus:ring-1 focus:ring-brand-green"
+          className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
         >
           <option value="">Select task type</option>
           {TASK_TYPES.map((task) => (
@@ -72,21 +72,21 @@ export function AddTaskForm({ specimenId }: AddTaskFormProps) {
       </div>
 
       <div>
-        <label htmlFor="due_date" className="block text-sm font-medium text-brand-green">
+        <label htmlFor="due_date" className="block text-sm font-medium text-slate-700">
           Due Date
         </label>
         <input
           id="due_date"
           name="due_date"
           type="datetime-local"
-          className="mt-1 block w-full rounded-md border border-brand-pink-dark px-3 py-2 text-sm focus:border-brand-green focus:outline-none focus:ring-1 focus:ring-brand-green"
+          className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
         />
       </div>
 
       {message ? (
         <div
-          className={`rounded-md p-3 text-sm font-medium ${
-            message.type === "error" ? "bg-red-50 text-red-700 border border-red-200" : "bg-brand-pink-light text-brand-green border border-brand-pink/30"
+          className={`rounded-md p-3 text-sm ${
+            message.type === "error" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"
           }`}
         >
           {message.text}
@@ -96,7 +96,7 @@ export function AddTaskForm({ specimenId }: AddTaskFormProps) {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="rounded-md bg-brand-green px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-brand-green-dark hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isSubmitting ? "Adding..." : "Add Task"}
       </button>

@@ -4,8 +4,10 @@ import { Specimen } from '@/types/specimen';
 import { TaskRow } from '@/app/actions/tasks';
 
 describe('aggregateDashboardStats', () => {
+  const base = { provenance: 'USER' as const, confidence_score: 100, sync_status: 'SYNCED_CLOUD' as const };
   const mockSpecimens: Specimen[] = [
     {
+      ...base,
       id: 's1',
       nickname: 'Healthy Plant',
       kingdom: 'Plantae',
@@ -13,10 +15,11 @@ describe('aggregateDashboardStats', () => {
       telemetry: { moisture: 0.5, temperature: 22, light: 500 },
       created_at: new Date('2024-01-01').toISOString(),
       species_name: 'Monstera',
-      lat: 40.7128, // Safe New York
+      lat: 40.7128,
       lon: -74.0060,
     },
     {
+      ...base,
       id: 's2',
       nickname: 'Restricted Entry',
       kingdom: 'Plantae',
@@ -24,7 +27,7 @@ describe('aggregateDashboardStats', () => {
       telemetry: { moisture: 0.4, temperature: 21, light: 400 },
       created_at: new Date('2024-01-02').toISOString(),
       species_name: 'Cactus',
-      lat: 36.06, // Ecological Protection Zone (EPZ)
+      lat: 36.06,
       lon: -115.06,
     }
   ];
@@ -76,13 +79,14 @@ describe('aggregateDashboardStats', () => {
 
   it('identifies incomplete records', () => {
     const incompleteSpecimen: Specimen = {
+      ...base,
       id: 's3',
       nickname: 'Mystery',
       kingdom: 'Plantae',
       health: 50,
       telemetry: { moisture: 0.3, temperature: 20, light: 300 },
       created_at: new Date().toISOString(),
-      species_name: null, // Missing species
+      species_name: null,
     };
     
     const stats = aggregateDashboardStats([incompleteSpecimen], []);

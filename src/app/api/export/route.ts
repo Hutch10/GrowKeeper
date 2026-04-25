@@ -16,8 +16,8 @@ export async function GET(request: Request) {
   try {
     // Fetch all user data
     const [plantsResult, careEventsResult, tasksResult] = await Promise.all([
-      supabase.from('plants').select('*').eq('user_id', user.id),
-      supabase.from('plant_events').select('*').eq('user_id', user.id),
+      supabase.from('specimens').select('*').eq('user_id', user.id),
+      supabase.from('specimen_events').select('*').eq('user_id', user.id),
       supabase.from('tasks').select('*').eq('user_id', user.id),
     ]);
 

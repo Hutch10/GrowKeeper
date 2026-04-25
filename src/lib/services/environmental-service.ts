@@ -1,17 +1,19 @@
-import { 
-  EnvironmentalSentinelSignal, 
-  EnvironmentalSignalType, 
-  DEFAULT_THRESHOLDS,
-  SignalStatus,
-  SignalSeverity
-} from "@/types/environmental";
+import { mycelialOrchestrator } from "./agents/mycelial-orchestrator";
 import { BiologicalSpecimen } from "@/types/biological-intelligence";
+import { EnvironmentalSentinelSignal, EnvironmentalSignalType, SignalSeverity } from "@/types/environmental";
+import { createHash } from "crypto";
 import { createClient } from "@/lib/supabase-server";
-import { recordAuditEntry } from "./audit-ledger";
-import { createHash } from "node:crypto";
+import { recordAuditEntry } from "@/lib/services/audit-ledger";
+
+export type { EnvironmentalSentinelSignal };
+
+const DEFAULT_THRESHOLDS = {
+  frost_temp_c: 2,
+  heat_temp_c: 35,
+};
 
 /**
- * Environmental Intelligence Service (v2.0.0)
+ * Environmental Intelligence Service (v2.1.0 - Full Potential)
  * Deterministic Sentinel Agent #1 for registry-linked risk management.
  */
 
@@ -24,6 +26,7 @@ export interface RawWeatherData {
   forecast_start: string;
   forecast_end: string;
   advisory_codes: string[];
+  buoy_temp_c?: number; // New: Marine sensor layer
 }
 
 /**
@@ -94,6 +97,7 @@ class NWSProvider implements IEnvironmentalProvider {
  * Mock Environmental Provider
  * For testing and deterministic simulation.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 class MockProvider implements IEnvironmentalProvider {
   readonly name = "MOCK_SENTINEL";
 
@@ -142,23 +146,32 @@ export class EnvironmentalService {
    * Fetches data, runs rules, handles duplicate suppression, and persists signals.
    */
   async evaluateSpecimenRisk(specimen: BiologicalSpecimen): Promise<EnvironmentalSentinelSignal | null> {
-    const { lat, lon, id: specimen_id } = specimen;
+    const { lat, lon, id: specimen_id, region } = specimen;
     const correlation_id = `sentinel_run_${Date.now()}`;
 
     if (lat === null || lon === null || lat === undefined || lon === undefined) {
       return this.handleNoCoverage(specimen_id, "Missing coordinates", correlation_id);
     }
 
+    // Phase 1: Dynamic Weather Data Acquisition
     const rawData = await this.provider.getRawWeather(lat, lon);
     if (!rawData) {
-      return this.handleNoCoverage(specimen_id, "Outside NWS scope", correlation_id);
+      return this.handleNoCoverage(specimen_id, "Outside reach of atmospheric lattice", correlation_id);
     }
 
-    // Run Rule Engine
+    // Phase 3: Federated Intelligence (Mycelial Orchestration)
+    // We run the orchestrator to get a synthesized directive
+    const synthesis = await mycelialOrchestrator.orchestrate(specimen as BiologicalSpecimen, []);
+
+    // Phase 4: Deterministic Guard Logic
     const signals = this.runRuleEngine(specimen_id, rawData, correlation_id);
     
-    // For Alpha Pilot, we process relevant signals one-by-one
-    // and suppress duplicates against the structured store.
+    // Inject Mycelial Synthesis into the primary signal if it exists
+    if (signals.length > 0) {
+      signals[0].operator_summary = `${signals[0].operator_summary}\n\n${synthesis.analysis}`;
+      signals[0].provenance = 'ENVIRONMENTAL_AGENT';
+    }
+
     for (const signal of signals) {
       await this.processSignal(signal);
     }

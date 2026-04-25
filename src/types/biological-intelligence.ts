@@ -1,5 +1,7 @@
 import { Json } from "./database";
 
+export type KingdomType = 'Plantae' | 'Fungi' | 'Animalia' | 'Protista' | 'Monera' | string;
+
 export type ProvenanceSource = 
   | 'USER' 
   | 'SENTINEL_RULE' 
@@ -8,12 +10,13 @@ export type ProvenanceSource =
   | 'RECOVERY_REPLAY'
   | 'LOCAL_BUFFER';
 
-export type SyncStatus = 
-  | 'QUEUED_LOCAL' 
-  | 'SYNCING' 
-  | 'SYNCED_CLOUD' 
-  | 'REPLAYED' 
-  | 'CONFLICT' 
+export type SyncStatus =
+  | 'QUEUED_LOCAL'
+  | 'BUFFERED_LOCAL'
+  | 'SYNCING'
+  | 'SYNCED_CLOUD'
+  | 'REPLAYED'
+  | 'CONFLICT'
   | 'FAILED';
 
 /**

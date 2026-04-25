@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { addSpecimenEvent } from "@/app/actions/specimen-events";
+import { addPlantEvent } from "@/app/actions/plant-events";
 import type { CareEventType } from "@/types/database";
 
 interface AddCareEventFormProps {
-  specimenId: string;
+  plantId: string;
 }
 
 const EVENT_TYPES: { value: CareEventType; label: string }[] = [
@@ -16,7 +16,7 @@ const EVENT_TYPES: { value: CareEventType; label: string }[] = [
   { value: "repotted", label: "Repotted" },
 ];
 
-export function AddCareEventForm({ specimenId }: AddCareEventFormProps) {
+export function AddCareEventForm({ plantId }: AddCareEventFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -31,7 +31,8 @@ export function AddCareEventForm({ specimenId }: AddCareEventFormProps) {
     const event_type = formData.get("event_type") as CareEventType;
     const notes = formData.get("notes") as string;
 
-    const result = await addSpecimenEvent(specimenId, {
+    const result = await addPlantEvent({
+      plant_id: plantId,
       event_type,
       notes: notes || undefined,
     });
@@ -53,14 +54,14 @@ export function AddCareEventForm({ specimenId }: AddCareEventFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="event_type" className="block text-sm font-medium text-brand-green">
-          Event Type <span className="text-brand-pink-dark font-bold">*</span>
+        <label htmlFor="event_type" className="block text-sm font-medium text-slate-700">
+          Event Type <span className="text-red-500">*</span>
         </label>
         <select
           id="event_type"
           name="event_type"
           required
-          className="mt-1 block w-full rounded-md border border-brand-pink-dark px-3 py-2 shadow-sm focus:border-brand-green focus:outline-none focus:ring-1 focus:ring-brand-green bg-white text-brand-dark"
+          className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
         >
           <option value="">Select event type</option>
           {EVENT_TYPES.map((type) => (
@@ -72,24 +73,24 @@ export function AddCareEventForm({ specimenId }: AddCareEventFormProps) {
       </div>
 
       <div>
-        <label htmlFor="notes" className="block text-sm font-medium text-brand-green">
+        <label htmlFor="notes" className="block text-sm font-medium text-slate-700">
           Notes (Optional)
         </label>
         <textarea
           id="notes"
           name="notes"
           rows={3}
-          className="mt-1 block w-full rounded-md border border-brand-pink-dark px-3 py-2 shadow-sm focus:border-brand-green focus:outline-none focus:ring-1 focus:ring-brand-green bg-white text-brand-darkPlaceholder placeholder-brand-dark/30"
+          className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
           placeholder="Add any additional details..."
         />
       </div>
 
       {message && (
         <div
-          className={`rounded-md p-3 text-sm font-medium border ${
+          className={`rounded-md p-3 text-sm ${
             message.type === "success"
-              ? "bg-brand-pink-light text-brand-green border-brand-pink/30"
-              : "bg-red-50 text-red-800 border-red-200"
+              ? "bg-green-50 text-green-800"
+              : "bg-red-50 text-red-800"
           }`}
         >
           {message.text}
@@ -99,7 +100,7 @@ export function AddCareEventForm({ specimenId }: AddCareEventFormProps) {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full rounded-md bg-brand-green px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-brand-green-dark hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isSubmitting ? "Logging Event..." : "Log Care Event"}
       </button>

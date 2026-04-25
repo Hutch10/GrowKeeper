@@ -34,6 +34,7 @@ export async function getPublicProfile(id: string) {
     id: p.id,
     email: p.email,
     created_at: p.created_at,
+    role: p.role,
     nickname: (p as Record<string, unknown>).nickname as string || p.email?.split("@")[0] || "Collector",
     avatar_url: (p as Record<string, unknown>).avatar_url as string | undefined,
     bio: (p as Record<string, unknown>).bio as string | undefined,

@@ -1,6 +1,5 @@
 import { Specimen } from "@/types/specimen";
 import { TaskRow } from "@/app/actions/tasks";
-import { checkLegalStatus } from "@/lib/geofencing";
 
 export interface DashboardKPIs {
   totalSpecimens: number;
@@ -41,13 +40,8 @@ export function aggregateDashboardStats(
   const todayEnd = new Date(now.setHours(23, 59, 59, 999));
 
   // 1. Compute KPIs
-  const incomplete = specimens.filter(s => !s.species_name || s.lat === null || s.lon === null).length;
-  const flaggedSpecimens = specimens.filter(s => {
-    if (s.lat !== null && s.lat !== undefined && s.lon !== null && s.lon !== undefined) {
-      return checkLegalStatus(s.lon, s.lat).status !== 'safe';
-    }
-    return false;
-  });
+  const incomplete = specimens.filter(s => !s.species_name).length;
+  const flaggedSpecimens = specimens.filter(s => (s.health ?? 100) < 40);
 
   const dueTasks = tasks.filter(t => !t.completed && t.due_date);
   const overdueTasks = dueTasks.filter(t => new Date(t.due_date!) < todayStart);
@@ -81,27 +75,26 @@ export function aggregateDashboardStats(
     });
   });
 
-  // 2.2 Flagged Specimens
+  // 2.2 Low-health specimens
   flaggedSpecimens.forEach(s => {
-    const geo = checkLegalStatus(s.lon!, s.lat!);
     priorityQueue.push({
       id: `flag-${s.id}`,
       type: 'FLAGGED',
-      title: 'Restricted Land Entry',
-      subtitle: `${s.nickname}: ${geo.message.split('.')[0]}`,
-      severity: geo.status === 'danger' ? 'danger' : 'warning',
+      title: 'Low Health',
+      subtitle: `${s.nickname} is at ${s.health ?? '?'}% health — check care schedule.`,
+      severity: (s.health ?? 100) < 20 ? 'danger' : 'warning',
       timestamp: s.created_at,
       specimenId: s.id
     });
   });
 
   // 2.3 Incomplete Data
-  specimens.filter(s => !s.species_name || s.lat === null || s.lat === undefined).forEach(s => {
+  specimens.filter(s => !s.species_name).forEach(s => {
     priorityQueue.push({
       id: `inc-${s.id}`,
       type: 'INCOMPLETE',
       title: 'Missing Identity Data',
-      subtitle: `${s.nickname} requires species identification or GPS anchoring.`,
+      subtitle: `${s.nickname} is missing a species name.`,
       severity: 'info',
       timestamp: s.created_at,
       specimenId: s.id

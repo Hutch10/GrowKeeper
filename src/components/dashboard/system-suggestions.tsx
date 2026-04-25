@@ -13,7 +13,19 @@ interface Suggestion {
   status: 'pending' | 'completed';
 }
 
+import { useRouter } from 'next/navigation';
+
+interface Suggestion {
+  id: string;
+  title: string;
+  description: string;
+  action: string;
+  icon: LucideIcon;
+  status: 'pending' | 'completed';
+}
+
 export function SystemSuggestions({ onStartWizard }: { onStartWizard: () => void }) {
+  const router = useRouter();
   const suggestions: Suggestion[] = [
     {
       id: 'first-specimen',
@@ -27,7 +39,7 @@ export function SystemSuggestions({ onStartWizard }: { onStartWizard: () => void
       id: 'sensor-calibration',
       title: 'Calibrate Regional Sensors',
       description: 'Sync with global satellite nodes to verify environmental data integrity.',
-      action: 'Enter Simulation',
+      action: 'Enter Platform',
       icon: Cpu,
       status: 'pending'
     },
@@ -40,6 +52,15 @@ export function SystemSuggestions({ onStartWizard }: { onStartWizard: () => void
       status: 'pending'
     }
   ];
+
+  const handleSuggestionClick = (id: string) => {
+    if (id === 'first-specimen') onStartWizard();
+    if (id === 'sensor-calibration') router.push('/telemetry');
+    if (id === 'sovereign-protocols') {
+       // Assuming it triggers a tab change if handled in parent, 
+       // but here we can just push if it was a route
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -59,7 +80,7 @@ export function SystemSuggestions({ onStartWizard }: { onStartWizard: () => void
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
             className="group p-6 bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-[2.5rem] hover:border-brand-pink/30 hover:bg-brand-pink/5 transition-all cursor-pointer"
-            onClick={suggestion.id === 'first-specimen' ? onStartWizard : undefined}
+            onClick={() => handleSuggestionClick(suggestion.id)}
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-slate-50 dark:bg-white/10 rounded-2xl group-hover:bg-brand-pink/10 transition-colors">

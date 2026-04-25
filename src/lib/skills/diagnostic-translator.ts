@@ -11,13 +11,19 @@ export interface DiagnosticDirective {
   context_id?: string;
 }
 
+interface DiagnosticError {
+  message?: string;
+  code?: string | number;
+}
+
 export class DiagnosticTranslator {
   /**
    * Translates a raw error or telemetry signal into a high-faith directive.
    */
-  static translate(error: any): DiagnosticDirective {
-    const message = error?.message || String(error);
-    const code = error?.code;
+  static translate(error: unknown): DiagnosticDirective {
+    const err = error as DiagnosticError;
+    const message = err?.message || String(error);
+    const code = String(err?.code || "");
 
     // 1. Connection / Registry DNS Faults
     if (message.includes("ENOTFOUND") || message.includes("fetch failed") || message.includes("Network Error")) {
@@ -30,7 +36,7 @@ export class DiagnosticTranslator {
     }
 
     // 2. Auth / Protocol Expiration
-    if (message.includes("JWT") || message.includes("unauthorized") || message.includes("session missing")) {
+    if (message.includes("JWT") || message.includes("unauthorized") || message.includes("session missing") || message.includes("Authentication required")) {
       return {
         title: "PROTOCOL_INVALID",
         directive: "Sovereign identity token has expired or is invalid. Secure re-authentication is required to authorize cloud-canonical writes.",
@@ -55,6 +61,24 @@ export class DiagnosticTranslator {
         title: "SECURITY_BLOCK",
         directive: "Action neutralized by Registry Authority (RLS). Ensure the operator has the necessary lineage permissions for this biological asset.",
         severity: "CRITICAL"
+      };
+    }
+    
+    // 5. Identification Biometrics
+    if (message.includes("IDENT_SUCCESS") || message.includes("Identification successful")) {
+      return {
+        title: "BIOMETRIC_MATCH",
+        directive: "Sentinel successfully matched specimen against global taxonomic registry. Care protocols and lineage data have been cross-verified.",
+        severity: "NOMINAL"
+      };
+    }
+
+    if (message.includes("IDENT_FAILURE") || message.includes("Identification failed") || message.includes("not identified")) {
+       return {
+        title: "BIOMETRIC_FAULT",
+        directive: "Registry failed to verify specimen via vision biometric uplink. Asset requires manual taxonomic anchoring by a certified operator.",
+        severity: "CAUTION",
+        action_label: "MANUAL ANCHOR"
       };
     }
 

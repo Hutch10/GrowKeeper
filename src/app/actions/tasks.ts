@@ -193,6 +193,9 @@ export async function getTasks(): Promise<ActionResult<TaskRow[]>> {
   }
 }
 
+export const getPlantTasks = getSpecimenTasks;
+export const addTask = addSpecimenTask;
+
 export async function markTaskComplete(taskId: string, specimenId: string): Promise<ActionResult<TaskRow>> {
   const auth = await getAuthenticatedUser();
 
