@@ -146,7 +146,7 @@ export class EnvironmentalService {
    * Fetches data, runs rules, handles duplicate suppression, and persists signals.
    */
   async evaluateSpecimenRisk(specimen: BiologicalSpecimen): Promise<EnvironmentalSentinelSignal | null> {
-    const { lat, lon, id: specimen_id, region } = specimen;
+    const { lat, lon, id: specimen_id } = specimen;
     const correlation_id = `sentinel_run_${Date.now()}`;
 
     if (lat === null || lon === null || lat === undefined || lon === undefined) {

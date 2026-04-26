@@ -67,8 +67,8 @@ export async function triggerSentinelRun(specimenId: string): Promise<ActionResu
         provider_label: "NWS/NOAA"
       }
     };
-  } catch (err: any) {
-    return { success: false, data: null, error: `Sentinel Fault: ${err.message}` };
+  } catch (err) {
+    return { success: false, data: null, error: `Sentinel Fault: ${err instanceof Error ? err.message : String(err)}` };
   }
 }
 
@@ -99,7 +99,7 @@ export async function calibrateSensors(): Promise<ActionResult<{ certificateId: 
       success: true, 
       data: { certificateId } 
     };
-  } catch (err: any) {
-    return { success: false, data: null, error: `Calibration Engine Fault: ${err.message}` };
+  } catch (err) {
+    return { success: false, data: null, error: `Calibration Engine Fault: ${err instanceof Error ? err.message : String(err)}` };
   }
 }

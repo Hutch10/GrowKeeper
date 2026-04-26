@@ -7,7 +7,7 @@ import { checkMutationGuard } from "@/lib/mutation-utility";
 import { recordAuditEntry } from "@/lib/services/audit-ledger";
 import { trackAlphaEvent } from "@/lib/services/alpha-telemetry";
 import { normalizeActionError } from "@/lib/error-normalization";
-import type { Database, CareEventType, Json } from "@/types/database";
+import type { Database, CareEventType } from "@/types/database";
 import type { ActionResult } from "@/app/actions/types";
 
 type EventInsert = Database["public"]["Tables"]["specimen_events"]["Insert"];

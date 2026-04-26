@@ -11,7 +11,7 @@ export default async function NewSpecimenPage() {
     redirect("/dashboard");
   }
 
-  const auth = await getAuthenticatedUser();
+  await getAuthenticatedUser();
   // ... rest (legacy fallback)
   return (
     <main className="min-h-screen bg-brand-warm font-[family-name:var(--font-geist-sans)] text-brand-dark">

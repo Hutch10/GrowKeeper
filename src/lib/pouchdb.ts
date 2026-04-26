@@ -8,6 +8,7 @@ export interface BiologicalOperation {
   id: string; // The target specimen ID or a unique op ID
   action: 'CREATE' | 'UPDATE' | 'DELETE';
   status: SyncStatus;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: any;
   provenance: ProvenanceSource;
   timestamp: string;
@@ -23,12 +24,13 @@ export interface IntelligenceMemoryDoc {
   doc_type: 'conflict_history' | 'operator_intervention' | 'integrity_timeline_entry';
   correlation_id: string; // MANDATORY: For cross-referencing
   specimen_id: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: any;
   provenance: ProvenanceSource;
   sync_status: SyncStatus;
   created_at: string;
   updated_at: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface BiologicalTreatment {
@@ -94,6 +96,7 @@ export const memoryDB = createSafeDB<IntelligenceMemoryDoc>('operations_memory')
  * Maps a PouchDB document to our application's domain model.
  * PouchDB uses _id and _rev, while our application expects 'id'.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function fromPouch<T>(doc: any): T {
   const data = { ...doc };
   const id = data._id;
@@ -161,7 +164,7 @@ export async function acquireSyncLock(): Promise<boolean> {
 
     await syncMutexDB.put(lockDoc);
     return true;
-  } catch (err) {
+  } catch {
     return false;
   }
 }
@@ -173,7 +176,7 @@ export async function releaseSyncLock(): Promise<void> {
     if (existing.holder_id === TAB_ID) {
       await syncMutexDB.remove(existing);
     }
-  } catch (_err) {
+  } catch {
     // Silent fail
   }
 }

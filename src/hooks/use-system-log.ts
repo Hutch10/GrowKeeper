@@ -56,8 +56,8 @@ export function useSystemLog() {
          .limit(5);
        
        if (data && !error) {
-         (data as { event_type: string; metadata: unknown }[]).forEach(event => {
-            const meta = event.metadata as any;
+         (data as { event_type: string; metadata: Record<string, string | undefined> }[]).forEach(event => {
+            const meta = event.metadata;
             addLog(
               `[AUDIT] ${event.event_type}: ${meta?.audit_target || 'System event'}`,
               event.event_type.startsWith('AUDIT_') ? 'audit' : 'event',
@@ -69,7 +69,7 @@ export function useSystemLog() {
             );
          });
        }
-     } catch (err) {
+     } catch {
        // Silent failure for polling
      } finally {
        isPollingRef.current = false;

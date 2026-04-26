@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
   Sidebar 
 } from "@/components/layout/sidebar";
@@ -16,13 +16,11 @@ import {
   Clock,
   Waves
 } from "lucide-react";
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   AreaChart,
   Area
@@ -32,7 +30,7 @@ import { calibrateSensors } from "@/app/actions/environmental-actions";
 import { toast } from "sonner";
 
 export default function TelemetryDashboard() {
-  const { signals, loading, fetchSignals } = useEnvironmentalSentinel();
+  const { signals, fetchSignals } = useEnvironmentalSentinel();
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [lastCalibration, setLastCalibration] = useState<string | null>(null);
 
@@ -265,7 +263,7 @@ function LegendItem({ color, label }: { color: string, label: string }) {
   );
 }
 
-function TelemetryMetricCard({ title, value, subValue, icon: Icon, color }: { title: string, value: string, subValue: string, icon: any, color: string }) {
+function TelemetryMetricCard({ title, value, subValue, icon: Icon, color }: { title: string, value: string, subValue: string, icon: React.ElementType, color: string }) {
   return (
     <div className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-[2.5rem] p-8 group hover:border-emerald-500/30 transition-all">
        <div className="flex items-center justify-between mb-6 text-slate-300 dark:text-white/10">
@@ -281,7 +279,7 @@ function TelemetryMetricCard({ title, value, subValue, icon: Icon, color }: { ti
 }
 
 function Badge({ children, variant = "default", className = "" }: { children: React.ReactNode, variant?: string, className?: string }) {
-  const styles: any = {
+  const styles: Record<string, string> = {
     default: "bg-slate-100 text-slate-900 dark:bg-white/10 dark:text-white",
     emerald: "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
   };

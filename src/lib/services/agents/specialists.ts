@@ -83,9 +83,10 @@ PRIORITIES:
 
 RULE: Maintain absolute operational honesty. Distinguish clearly between local functionality and cloud-dependent services.`;
 
-  async performSystemCheck(faultContext?: string): Promise<AgentResponse> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async performSystemCheck(_faultContext?: string): Promise<AgentResponse> {
     // This is a special method for infrastructure-level checks
-    const provider = this.analyze({ id: 'system', nickname: 'Backbone', health: 100 } as any, []);
+    const provider = this.analyze({ id: 'system', nickname: 'Backbone', health: 100 } as SpecimenRow, []);
     return provider;
   }
 }

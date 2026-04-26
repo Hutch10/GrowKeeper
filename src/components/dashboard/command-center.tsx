@@ -13,7 +13,6 @@ import type { SpecimenRow } from "@/app/actions/types";
 import type { TaskRow } from "@/app/actions/tasks";
 import { KPIStrip } from "./kpi-strip";
 import { Sidebar } from "../layout/sidebar";
-import { TipsSection } from "./tips-section";
 import { AddSpecimenForm } from "../plants/add-specimen-form";
 import { AnimatePresence } from "framer-motion";
 import Image from "next/image";
@@ -62,7 +61,10 @@ export function CommandCenter({
     errorMessage: specimenError,
   } = useSpecimenData(initialSpecimens as SpecimenRow[]);
 
-  const specimens = specimensFromHook || initialSpecimens || [];
+  const specimens = useMemo(
+    () => specimensFromHook || initialSpecimens || [],
+    [specimensFromHook, initialSpecimens]
+  );
   const displayError = specimenError || errorMessage;
 
   const { tasks, loading: tasksLoading } = useTaskData(initialTasks);

@@ -1,8 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { IntelligenceMemoryManager } from '@/lib/memory/intelligence-memory';
 import { IntelligenceMemoryDoc } from '@/lib/pouchdb';
 import { getAuditTrail } from '@/lib/services/audit-ledger';
-import { createBrowserSupabaseClient } from '@/lib/supabase-browser';
 
 export interface NarrativeSummary {
   summary: string;
@@ -19,9 +18,9 @@ export function useIntegrityMemory(specimenId?: string) {
   const [timeline, setTimeline] = useState<IntelligenceMemoryDoc[]>([]);
   const [narrative, setNarrative] = useState<NarrativeSummary | null>(null);
   const [loading, setLoading] = useState(false);
-  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
 
   useEffect(() => {
+
     if (!specimenId) return;
     const id = specimenId;
 
@@ -30,9 +29,11 @@ export function useIntegrityMemory(specimenId?: string) {
       try {
         const localTimeline = await IntelligenceMemoryManager.getIntegrityTimeline(id);
         const audit = await getAuditTrail(id);
-        const cloudEvents = audit.success ? audit.data : [];
+        const cloudEvents: IntelligenceMemoryDoc[] = audit.success
+          ? ((audit.data ?? []) as unknown as IntelligenceMemoryDoc[])
+          : [];
 
-        const combined = [...localTimeline, ...(cloudEvents as any[])]
+        const combined = [...localTimeline, ...cloudEvents]
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
         const summary: NarrativeSummary = {

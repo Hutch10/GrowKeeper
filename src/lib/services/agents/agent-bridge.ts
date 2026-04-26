@@ -66,6 +66,7 @@ export abstract class SpecialistAgent {
   protected abstract name: string;
   protected abstract systemPrompt: string;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async analyze(specimen: SpecimenRow, _events: EventRow[]): Promise<AgentResponse> {
     const provider = ProviderFactory.getProvider();
 

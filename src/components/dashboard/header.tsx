@@ -34,8 +34,6 @@ export function DashboardHeader({ title, className, onMenuClick }: DashboardHead
     // Simulate a bit of delay for UX
     setTimeout(() => setIsSyncing(false), 1000);
   };
-  const isAlphaLockdown = process.env.NEXT_PUBLIC_ALPHA_LOCKDOWN === 'true';
-
   return (
     <header className={`flex items-center justify-between mb-8 ${className || ""}`}>
       <div className="flex items-center gap-4">

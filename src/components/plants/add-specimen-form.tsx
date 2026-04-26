@@ -250,7 +250,6 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
       if (result.success) {
         if (result.sentinel_diagnostic) {
           addLog(result.sentinel_diagnostic.message, 'sentinel', {
-            // @ts-ignore - Handle metadata
             provider_label: result.sentinel_diagnostic.provider_label
           });
           toast.info("Registry anchored in Resilient Mode. Sentinel Diagnostic interjected.");
@@ -262,7 +261,6 @@ export function AddSpecimenForm({ isOpen, onClose }: AddSpecimenFormProps) {
       } else {
         if (result.sentinel_diagnostic) {
            addLog(result.sentinel_diagnostic.message, 'sentinel', {
-             // @ts-ignore - Handle metadata
              provider_label: result.sentinel_diagnostic.provider_label
            });
         }

@@ -1,4 +1,4 @@
-import { memoryDB, IntelligenceMemoryDoc, fromPouch, toPouch } from '@/lib/pouchdb';
+import { memoryDB, IntelligenceMemoryDoc, fromPouch } from '@/lib/pouchdb';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { recordAuditEntry } from '@/lib/services/audit-ledger';
 import { AuditSentinel } from '@/lib/agents/audit-sentinel';
@@ -33,7 +33,7 @@ export class IntelligenceMemoryManager {
 
     try {
       // Step A: Local Mirror Initial Write
-      await memoryDB.put(docToBuffer as any);
+      await memoryDB.put(docToBuffer as unknown as PouchDB.Core.Document<IntelligenceMemoryDoc>);
 
       // Step B: Attempt Cloud Canonical Write
       const tableName = this.mapDocTypeToTable(doc.doc_type);
